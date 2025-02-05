@@ -6,11 +6,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV ACCEPT_EULA=Y
 
 # Install system dependencies and development tools
-# - software-properties-common: Adds apt repository management
-# - build-essential: Provides compilation tools (gcc, make)
-# - libopenblas-dev: Optimized linear algebra library
-# - ninja-build: Fast build system
-# - Additional tools: git, curl, node.js, etc.
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
@@ -36,58 +31,85 @@ RUN apt-get update && \
 # Set up Git LFS for handling large files
 RUN git lfs install
 
-# Install and configure WasmEdge for WebAssembly runtime
+# Install and configure WasmEdge
 RUN curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash
 ENV PATH="/root/.wasmedge/bin:${PATH}"
 ENV WASMEDGE_HOME="/root/.wasmedge"
 
-# Create directory structure for application components
+# Create directory structure
 WORKDIR /app
-RUN mkdir -p models scripts logs chatbot-ui
+RUN mkdir -p models scripts logs chatbot-ui qdrant/storage qdrant/snapshots
 
-# Download the LLaMA language model
+# Download models
 WORKDIR /app/models
-RUN curl -L "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf" -o llama3-8b-instruct.gguf
+RUN curl -L "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf" -o llama3-8b-instruct.gguf && \
+    curl -L "https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf" -o nomic-embed-text-v1.5.f16.gguf
 
-# Set up LlamaEdge components
+# Set up LlamaEdge components and embedding tools
 WORKDIR /app
 RUN curl -LO https://github.com/LlamaEdge/LlamaEdge/releases/latest/download/llama-simple.wasm && \
-    curl -LO https://github.com/LlamaEdge/LlamaEdge/releases/latest/download/llama-api-server.wasm
+    curl -LO https://github.com/LlamaEdge/LlamaEdge/releases/latest/download/llama-api-server.wasm && \
+    curl -LO https://github.com/GaiaNet-AI/embedding-tools/raw/main/paragraph_embed/paragraph_embed.wasm
 
 # Install chat UI interface
 RUN curl -L https://github.com/LlamaEdge/chatbot-ui/releases/latest/download/chatbot-ui.tar.gz | \
     tar xz -C /app/chatbot-ui --strip-components=1
 RUN npm install -g http-server
 
-# Verify key component installations
+# Install Qdrant
+RUN curl -L https://github.com/qdrant/qdrant/releases/latest/download/qdrant-linux-x86_64.tar.gz | \
+    tar xz -C /usr/local/bin
+
+# Verify installations
 RUN wasmedge --version && \
     npm --version && \
-    node --version
+    node --version && \
+    qdrant --version
 
-# Reset package manager to normal mode
 ENV DEBIAN_FRONTEND=dialog
 
-# Set working directory for runtime
 WORKDIR /app
 
-# Create startup script that:
-# - Initializes logging
-# - Starts API server with LLaMA model
-# - Verifies API server is running
-# - Launches UI server with proxy to API
+# Updated startup script to include Qdrant and embedding service
 RUN echo '#!/bin/bash\n\
 \n\
-# Function to log messages with timestamps\n\
 log_message() {\n\
     echo "[$(date '"'"'+%Y-%m-%d %H:%M:%S'"'"')] $1"\n\
 }\n\
 \n\
-# Create log files\n\
 mkdir -p /app/logs\n\
 touch /app/logs/api.log\n\
 touch /app/logs/ui.log\n\
+touch /app/logs/qdrant.log\n\
+touch /app/logs/embedding.log\n\
 \n\
-# Start API server in background\n\
+# Start Qdrant server\n\
+log_message "Starting Qdrant server..."\n\
+qdrant --storage-path /app/qdrant/storage --snapshots-path /app/qdrant/snapshots > /app/logs/qdrant.log 2>&1 &\n\
+QDRANT_PID=$!\n\
+\n\
+# Wait for Qdrant\n\
+log_message "Waiting for Qdrant server..."\n\
+max_attempts=30\n\
+count=0\n\
+while [ $count -lt $max_attempts ]; do\n\
+    if curl -s "http://localhost:6333/health" > /dev/null 2>&1; then\n\
+        log_message "Qdrant server is running"\n\
+        break\n\
+    fi\n\
+    count=$((count + 1))\n\
+    log_message "Attempt $count/$max_attempts: Qdrant not ready..."\n\
+    sleep 2\n\
+done\n\
+\n\
+# Start embedding service\n\
+log_message "Starting embedding service..."\n\
+cd /app && wasmedge --dir .:. \\\n\
+    --nn-preload default:GGML:AUTO:models/nomic-embed-text-v1.5.f16.gguf \\\n\
+    paragraph_embed.wasm > /app/logs/embedding.log 2>&1 &\n\
+EMBED_PID=$!\n\
+\n\
+# Start API server\n\
 log_message "Starting API server..."\n\
 cd /app && wasmedge --dir .:. \\\n\
     --nn-preload default:GGML:AUTO:models/llama3-8b-instruct.gguf \\\n\
@@ -96,17 +118,17 @@ cd /app && wasmedge --dir .:. \\\n\
     --socket-addr "0.0.0.0:8080" > /app/logs/api.log 2>&1 &\n\
 API_PID=$!\n\
 \n\
-# Wait for API to be available\n\
-log_message "Waiting for API server to start..."\n\
+# Wait for API\n\
+log_message "Waiting for API server..."\n\
 max_attempts=30\n\
 count=0\n\
 while [ $count -lt $max_attempts ]; do\n\
     if curl -s "http://localhost:8080/v1/models" > /dev/null 2>&1; then\n\
-        log_message "API server is up and running"\n\
+        log_message "API server is running"\n\
         break\n\
     fi\n\
     count=$((count + 1))\n\
-    log_message "Attempt $count/$max_attempts: API server not ready yet..."\n\
+    log_message "Attempt $count/$max_attempts: API not ready..."\n\
     sleep 2\n\
 done\n\
 \n\
@@ -126,9 +148,8 @@ cd /app/chatbot-ui && http-server . \\\n\
     --proxy-options.secure=false > /app/logs/ui.log 2>&1\n\
 ' > /app/scripts/entrypoint.sh && chmod +x /app/scripts/entrypoint.sh
 
-# Configure persistent storage and networking
-VOLUME ["/app/logs"]
-EXPOSE 8080 3000
+# Configure volumes and ports
+VOLUME ["/app/logs", "/app/qdrant/storage", "/app/qdrant/snapshots"]
+EXPOSE 8080 3000 6333 6334
 
-# Set container startup command
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
