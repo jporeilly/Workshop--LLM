@@ -45,9 +45,9 @@ ENV WASMEDGE_HOME="/root/.wasmedge"
 WORKDIR /app
 RUN mkdir -p models scripts logs chatbot-ui
 
-# Download the LLaMA language model
+# Download the Qwen model
 WORKDIR /app/models
-RUN curl -L "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf" -o llama3-8b-instruct.gguf
+RUN curl -L "https://huggingface.co/TheBloke/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q5_K_S.gguf" -o qwen-3b-instruct.gguf
 
 # Set up LlamaEdge components
 WORKDIR /app
@@ -72,7 +72,7 @@ WORKDIR /app
 
 # Create startup script that:
 # - Initializes logging
-# - Starts API server with LLaMA model
+# - Starts API server with Qwen model
 # - Verifies API server is running
 # - Launches UI server with proxy to API
 RUN echo '#!/bin/bash\n\
@@ -90,9 +90,9 @@ touch /app/logs/ui.log\n\
 # Start API server in background\n\
 log_message "Starting API server..."\n\
 cd /app && wasmedge --dir .:. \\\n\
-    --nn-preload default:GGML:AUTO:models/llama3-8b-instruct.gguf \\\n\
+    --nn-preload default:GGML:AUTO:models/qwen-3b-instruct.gguf \\\n\
     llama-api-server.wasm \\\n\
-    --prompt-template llama-3-chat \\\n\
+    --prompt-template qwen-2-chat \\\n\
     --socket-addr "0.0.0.0:8080" > /app/logs/api.log 2>&1 &\n\
 API_PID=$!\n\
 \n\
