@@ -45,11 +45,10 @@ WORKDIR /app/models
 RUN curl -L "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf" -o llama3-8b-instruct.gguf && \
     curl -L "https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf" -o nomic-embed-text-v1.5.f16.gguf
 
-# Set up LlamaEdge components and embedding tools
+# Set up LlamaEdge components and RAG API server
 WORKDIR /app
 RUN curl -LO https://github.com/LlamaEdge/LlamaEdge/releases/latest/download/llama-simple.wasm && \
-    curl -LO https://github.com/LlamaEdge/LlamaEdge/releases/latest/download/llama-api-server.wasm && \
-    curl -LO https://github.com/GaiaNet-AI/embedding-tools/raw/main/paragraph_embed/paragraph_embed.wasm
+    curl -LO https://github.com/LlamaEdge/LlamaEdge/releases/latest/download/rag-api-server.wasm
 
 # Install chat UI interface
 RUN curl -L https://github.com/LlamaEdge/chatbot-ui/releases/latest/download/chatbot-ui.tar.gz | \
@@ -70,7 +69,7 @@ ENV DEBIAN_FRONTEND=dialog
 
 WORKDIR /app
 
-# Updated startup script to include Qdrant and embedding service
+# Updated startup script with RAG API server
 RUN echo '#!/bin/bash\n\
 \n\
 log_message() {\n\
@@ -81,7 +80,6 @@ mkdir -p /app/logs\n\
 touch /app/logs/api.log\n\
 touch /app/logs/ui.log\n\
 touch /app/logs/qdrant.log\n\
-touch /app/logs/embedding.log\n\
 \n\
 # Start Qdrant server\n\
 log_message "Starting Qdrant server..."\n\
@@ -102,38 +100,48 @@ while [ $count -lt $max_attempts ]; do\n\
     sleep 2\n\
 done\n\
 \n\
-# Start embedding service\n\
-log_message "Starting embedding service..."\n\
-cd /app && wasmedge --dir .:. \\\n\
-    --nn-preload default:GGML:AUTO:models/nomic-embed-text-v1.5.f16.gguf \\\n\
-    paragraph_embed.wasm > /app/logs/embedding.log 2>&1 &\n\
-EMBED_PID=$!\n\
+if [ $count -eq $max_attempts ]; then\n\
+    log_message "ERROR: Qdrant server failed to start"\n\
+    cat /app/logs/qdrant.log\n\
+    exit 1\n\
+fi\n\
 \n\
-# Start API server\n\
-log_message "Starting API server..."\n\
+# Start RAG API server\n\
+log_message "Starting RAG API server..."\n\
 cd /app && wasmedge --dir .:. \\\n\
     --nn-preload default:GGML:AUTO:models/llama3-8b-instruct.gguf \\\n\
-    llama-api-server.wasm \\\n\
-    --prompt-template llama-3-chat \\\n\
-    --socket-addr "0.0.0.0:8080" > /app/logs/api.log 2>&1 &\n\
+    --nn-preload embedding:GGML:AUTO:models/nomic-embed-text-v1.5.f16.gguf \\\n\
+    rag-api-server.wasm \\\n\
+    --prompt-template llama-3-chat,embedding \\\n\
+    --model-name llama31,nomic-embed \\\n\
+    --ctx-size 16384,8192 \\\n\
+    --batch-size 128,8192 \\\n\
+    --rag-policy system-message \\\n\
+    --rag-prompt "Use the following pieces of context to answer the user'"'"'s question.\nIf you don'"'"'t know the answer, just say that you don'"'"'t know, don'"'"'t try to make up an answer.\n----------------\n" \\\n\
+    --qdrant-url http://127.0.0.1:6333 \\\n\
+    --qdrant-collection-name "pentaho" \\\n\
+    --qdrant-limit 1 \\\n\
+    --qdrant-score-threshold 0.2 \\\n\
+    --socket-addr 0.0.0.0:8080 \\\n\
+    --log-prompts > /app/logs/api.log 2>&1 &\n\
 API_PID=$!\n\
 \n\
-# Wait for API\n\
-log_message "Waiting for API server..."\n\
+# Wait for RAG API\n\
+log_message "Waiting for RAG API server..."\n\
 max_attempts=30\n\
 count=0\n\
 while [ $count -lt $max_attempts ]; do\n\
     if curl -s "http://localhost:8080/v1/models" > /dev/null 2>&1; then\n\
-        log_message "API server is running"\n\
+        log_message "RAG API server is running"\n\
         break\n\
     fi\n\
     count=$((count + 1))\n\
-    log_message "Attempt $count/$max_attempts: API not ready..."\n\
+    log_message "Attempt $count/$max_attempts: RAG API not ready..."\n\
     sleep 2\n\
 done\n\
 \n\
 if [ $count -eq $max_attempts ]; then\n\
-    log_message "ERROR: API server failed to start"\n\
+    log_message "ERROR: RAG API server failed to start"\n\
     cat /app/logs/api.log\n\
     exit 1\n\
 fi\n\
