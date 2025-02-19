@@ -1,6 +1,8 @@
 from openai import OpenAI
 import numpy as np
 from typing import List, Dict, Tuple
+import matplotlib
+matplotlib.use('Agg')  # Set the backend to Agg for non-interactive environments
 import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.manifold import TSNE
@@ -56,13 +58,14 @@ class EmbeddingAnalyzer:
         embeddings_matrix = np.vstack(embeddings)
         return cosine_similarity(embeddings_matrix)
     
-    def visualize_similarities(self, texts: List[str], labels: List[str] = None):
+    def visualize_similarities(self, texts: List[str], labels: List[str] = None, output_file: str = 'similarity_heatmap.png'):
         """
-        Create a heatmap visualization of text similarities.
+        Create a heatmap visualization of text similarities and save to file.
         
         Args:
             texts: List of texts to compare
             labels: Optional list of labels for the texts
+            output_file: Path to save the visualization
         """
         similarity_matrix = self.calculate_similarity_matrix(texts)
         plt.figure(figsize=(10, 8))
@@ -75,21 +78,28 @@ class EmbeddingAnalyzer:
             yticklabels=labels or range(len(texts))
         )
         plt.title('Semantic Similarity Heatmap')
-        plt.show()
+        plt.tight_layout()
+        plt.savefig(output_file)
+        plt.close()
     
-    def visualize_embedding_clusters(self, texts: List[str], labels: List[str] = None):
+    def visualize_embedding_clusters(self, texts: List[str], labels: List[str] = None, output_file: str = 'embedding_clusters.png'):
         """
-        Create a 2D visualization of embedding clusters using t-SNE.
+        Create a 2D visualization of embedding clusters using t-SNE and save to file.
         
         Args:
             texts: List of texts to visualize
             labels: Optional list of category labels for the texts
+            output_file: Path to save the visualization
         """
         embeddings = self.batch_embed(texts)
         embeddings_matrix = np.vstack(embeddings)
         
-        # Reduce dimensionality for visualization
-        tsne = TSNE(n_components=2, random_state=42)
+        # Calculate appropriate perplexity (should be smaller than n_samples)
+        n_samples = len(texts)
+        perplexity = min(30, n_samples - 1)  # Ensure perplexity is less than n_samples
+        
+        # Reduce dimensionality for visualization with adjusted perplexity
+        tsne = TSNE(n_components=2, random_state=42, perplexity=perplexity)
         reduced_embeddings = tsne.fit_transform(embeddings_matrix)
         
         # Create DataFrame for plotting
@@ -103,7 +113,9 @@ class EmbeddingAnalyzer:
         plt.figure(figsize=(12, 8))
         sns.scatterplot(data=df, x='x', y='y', hue='label', style='label')
         plt.title('2D Visualization of Text Embeddings')
-        plt.show()
+        plt.tight_layout()
+        plt.savefig(output_file)
+        plt.close()
 
 def demonstrate_embeddings():
     """
@@ -122,6 +134,7 @@ def demonstrate_embeddings():
         "What's the weather like in Paris?"
     ]
     analyzer.visualize_similarities(similar_texts, labels=[f"Text {i+1}" for i in range(len(similar_texts))])
+    print("Similarity heatmap saved as 'similarity_heatmap.png'")
     
     # Example 2: Topic Clustering
     print("\nExample 2: Topic Clustering")
@@ -141,6 +154,7 @@ def demonstrate_embeddings():
     ]
     topic_labels = ["Tech"]*3 + ["Sports"]*3 + ["Cooking"]*3
     analyzer.visualize_embedding_clusters(mixed_topics, labels=topic_labels)
+    print("Embedding clusters visualization saved as 'embedding_clusters.png'")
     
     # Example 3: Embedding Properties Analysis
     print("\nExample 3: Analyzing Embedding Properties")
@@ -153,7 +167,10 @@ def demonstrate_embeddings():
     plt.title("Distribution of Embedding Values")
     plt.xlabel("Value")
     plt.ylabel("Frequency")
-    plt.show()
+    plt.tight_layout()
+    plt.savefig('embedding_distribution.png')
+    plt.close()
+    print("Embedding distribution plot saved as 'embedding_distribution.png'")
     
     # Print statistical properties
     print(f"\nEmbedding Statistics:")
