@@ -31,6 +31,19 @@ def visualize_tokenization(text, filename):
     plt.savefig(os.path.join(output_dir, filename))
     plt.close()
 
+def print_token_analysis(text):
+    """Print detailed token analysis for a text."""
+    enc = tiktoken.get_encoding("cl100k_base")
+    tokens = enc.encode(text)
+    token_texts = [enc.decode([token]) for token in tokens]
+    
+    print(f"\nText: {text}")
+    print("Tokens:")
+    for i, (token, token_text) in enumerate(zip(tokens, token_texts)):
+        print(f"  {i+1}. Token ID: {token:5d} | Token Text: '{token_text}'")
+    print(f"Total tokens: {len(tokens)}")
+    print("-" * 50)
+
 def compare_tokenization_variations(texts, filename):
     """Compare tokenization of similar texts and save to file."""
     enc = tiktoken.get_encoding("cl100k_base")
@@ -73,6 +86,7 @@ def analyze_token_stats(texts, filename):
 def main():
     print(f"\nPlots will be saved to the '{output_dir}' directory.")
     
+    # Basic text examples
     texts = [
         "What is the capital of France?",
         "Tell me France's capital city",
@@ -89,16 +103,21 @@ def main():
     print("\nAnalyzing token statistics...")
     analyze_token_stats(texts, "token_stats.png")
     
+    # Special cases with detailed token analysis
     special_cases = [
         "OpenAI",
         "machine learning",
-        "🌟 emoji",
+        "special_token",
         "https://example.com",
         "Python3.9"
     ]
     
     print("\nDemonstrating special tokenization cases...")
     compare_tokenization_variations(special_cases, "special_cases.png")
+    
+    print("\nDetailed token analysis for special cases:")
+    for text in special_cases:
+        print_token_analysis(text)
     
     print(f"\nAll plots have been saved to the '{output_dir}' directory.")
 
