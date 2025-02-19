@@ -1,125 +1,94 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import tiktoken
-import textwrap
-from sklearn.decomposition import PCA
+import pandas as pd
+import matplotlib.pyplot as plt
 import os
 
-# Create output directory if it doesn't exist
-output_dir = "tokenization_plots"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
-def visualize_tokenization(text, filename):
-    """Visualize how the text is broken down into tokens and save to file."""
-    enc = tiktoken.get_encoding("cl100k_base")
-    tokens = enc.encode(text)
-    token_texts = [enc.decode([token]) for token in tokens]
+def explore_vocabulary(encoding_name="cl100k_base", n_samples=20):
+    """Explore and visualize the tokenizer vocabulary."""
+    enc = tiktoken.get_encoding(encoding_name)
     
-    plt.figure(figsize=(15, 4))
+    # Get the vocabulary dictionary
+    # Note: This is a special case for tiktoken, as it doesn't expose the vocabulary directly
+    vocab_dict = {}
+    for i in range(100000):  # Sample a range of token IDs
+        try:
+            token_bytes = enc.decode_single_token_bytes(i)
+            token_text = token_bytes.decode('utf-8', errors='replace')
+            vocab_dict[i] = token_text
+        except:
+            continue
+        if len(vocab_dict) >= n_samples:
+            break
     
-    for i, (token, text) in enumerate(zip(tokens, token_texts)):
-        plt.plot([i, i+1, i+1, i, i], [0, 0, 1, 1, 0], 'b-')
-        plt.text(i + 0.5, 0.5, f'"{text}"', ha='center', va='center')
-        plt.text(i + 0.5, -0.2, str(token), ha='center', va='center', color='red')
-    
-    plt.xlim(-0.2, len(tokens) + 0.2)
-    plt.ylim(-0.5, 1.5)
-    plt.title('Text Tokenization Visualization')
-    plt.axis('off')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, filename))
-    plt.close()
-
-def print_token_analysis(text):
-    """Print detailed token analysis for a text."""
-    enc = tiktoken.get_encoding("cl100k_base")
-    tokens = enc.encode(text)
-    token_texts = [enc.decode([token]) for token in tokens]
-    
-    print(f"\nText: {text}")
-    print("Tokens:")
-    for i, (token, token_text) in enumerate(zip(tokens, token_texts)):
-        print(f"  {i+1}. Token ID: {token:5d} | Token Text: '{token_text}'")
-    print(f"Total tokens: {len(tokens)}")
+    print(f"\nSample of {encoding_name} vocabulary:")
     print("-" * 50)
+    for token_id, token_text in list(vocab_dict.items())[:n_samples]:
+        print(f"Token ID: {token_id:5d} | Token Text: '{token_text}'")
 
-def compare_tokenization_variations(texts, filename):
-    """Compare tokenization of similar texts and save to file."""
-    enc = tiktoken.get_encoding("cl100k_base")
+def analyze_token_mapping(text, encoding_name="cl100k_base"):
+    """Analyze how text is mapped to tokens and back."""
+    enc = tiktoken.get_encoding(encoding_name)
     
-    plt.figure(figsize=(15, len(texts) * 2))
+    # Get tokens
+    tokens = enc.encode(text)
     
-    for idx, text in enumerate(texts):
-        tokens = enc.encode(text)
-        token_texts = [enc.decode([token]) for token in tokens]
-        
-        for i, (token, token_text) in enumerate(zip(tokens, token_texts)):
-            plt.plot([i, i+1, i+1, i, i], 
-                    [idx, idx, idx+1, idx+1, idx], 'b-')
-            plt.text(i + 0.5, idx + 0.5, f'"{token_text}"', 
-                    ha='center', va='center', fontsize=8)
-            plt.text(i + 0.5, idx + 0.2, str(token), 
-                    ha='center', va='center', color='red', fontsize=6)
+    print(f"\nToken mapping analysis for: '{text}'")
+    print("-" * 50)
+    print("Step 1: Text to Tokens")
+    print(f"Original text: {text}")
+    print(f"Token IDs: {tokens}")
     
-    plt.yticks(np.arange(len(texts)) + 0.5, texts)
-    plt.title('Comparison of Tokenization Across Similar Texts')
-    plt.axis('off')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, filename))
-    plt.close()
+    print("\nStep 2: Individual Token Analysis")
+    for i, token in enumerate(tokens):
+        token_text = enc.decode([token])
+        print(f"Position {i+1}: Token ID {token:5d} → '{token_text}'")
+    
+    print("\nStep 3: Reconstruction")
+    reconstructed = enc.decode(tokens)
+    print(f"Reconstructed text: {reconstructed}")
+    print(f"Matches original: {text == reconstructed}")
 
-def analyze_token_stats(texts, filename):
-    """Analyze and visualize tokenization statistics and save to file."""
-    enc = tiktoken.get_encoding("cl100k_base")
-    token_counts = [len(enc.encode(text)) for text in texts]
+def compare_encodings():
+    """Compare different tiktoken encodings."""
+    sample_text = "OpenAI develops GPT-4, an advanced AI model!"
+    encodings = [
+        "cl100k_base",  # ChatGPT
+        "p50k_base",    # GPT-3
+        "r50k_base"     # Earlier models
+    ]
     
-    plt.figure(figsize=(10, 5))
-    plt.bar(range(len(texts)), token_counts)
-    plt.xticks(range(len(texts)), [textwrap.fill(t, 20) for t in texts], rotation=45)
-    plt.ylabel('Number of Tokens')
-    plt.title('Token Count Comparison')
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, filename))
-    plt.close()
+    print("\nComparing different encodings:")
+    print("-" * 50)
+    for encoding_name in encodings:
+        enc = tiktoken.get_encoding(encoding_name)
+        tokens = enc.encode(sample_text)
+        print(f"\n{encoding_name}:")
+        print(f"Number of tokens: {len(tokens)}")
+        print("Token breakdown:")
+        for token in tokens:
+            print(f"  {token:5d} → '{enc.decode([token])}'")
 
 def main():
-    print(f"\nPlots will be saved to the '{output_dir}' directory.")
+    # Explore vocabulary
+    print("\nExploring tokenizer vocabulary...")
+    explore_vocabulary()
     
-    # Basic text examples
-    texts = [
-        "What is the capital of France?",
-        "Tell me France's capital city",
-        "Paris is located in which country?",
-        "What is the capital of Germany?"
-    ]
-    
-    print("\nVisualizing tokenization for first text...")
-    visualize_tokenization(texts[0], "single_text_tokenization.png")
-    
-    print("\nComparing tokenization across different texts...")
-    compare_tokenization_variations(texts, "text_comparison.png")
-    
-    print("\nAnalyzing token statistics...")
-    analyze_token_stats(texts, "token_stats.png")
-    
-    # Special cases with detailed token analysis
-    special_cases = [
+    # Analyze specific examples
+    print("\nAnalyzing token mappings...")
+    examples = [
         "OpenAI",
         "machine learning",
-        "special_token",
         "https://example.com",
-        "Python3.9"
+        "Python3.9",
+        "Hello, world!"
     ]
     
-    print("\nDemonstrating special tokenization cases...")
-    compare_tokenization_variations(special_cases, "special_cases.png")
+    for example in examples:
+        analyze_token_mapping(example)
     
-    print("\nDetailed token analysis for special cases:")
-    for text in special_cases:
-        print_token_analysis(text)
-    
-    print(f"\nAll plots have been saved to the '{output_dir}' directory.")
+    # Compare different encodings
+    print("\nComparing different encodings...")
+    compare_encodings()
 
 if __name__ == "__main__":
     main()
