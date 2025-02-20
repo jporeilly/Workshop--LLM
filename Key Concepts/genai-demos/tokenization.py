@@ -4,13 +4,25 @@ import tiktoken
 import textwrap
 from sklearn.decomposition import PCA
 import os
+from datetime import datetime
 
-# Create output directory
-output_dir = "tokenization_plots"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+def ensure_output_directory():
+    """Create and return the output directory path with timestamp."""
+    base_dir = "tokenization_analysis"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = os.path.join(base_dir, f"analysis_{timestamp}")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    return output_dir
 
-def explore_vocabulary(encoding_name="cl100k_base", n_samples=20):
+def save_plot(plt, output_dir, filename):
+    """Save the current plot to the visualizations directory."""
+    full_path = os.path.join(output_dir, filename)
+    plt.savefig(full_path)
+    print(f"Saved visualization to: {full_path}")
+    plt.close()
+
+def explore_vocabulary(output_dir, encoding_name="cl100k_base", n_samples=20):
     """Explore and visualize the tokenizer vocabulary."""
     enc = tiktoken.get_encoding(encoding_name)
     
@@ -26,33 +38,43 @@ def explore_vocabulary(encoding_name="cl100k_base", n_samples=20):
         if len(vocab_dict) >= n_samples:
             break
     
-    print(f"\nSample of {encoding_name} vocabulary:")
-    print("-" * 50)
-    for token_id, token_text in list(vocab_dict.items())[:n_samples]:
-        print(f"Token ID: {token_id:5d} | Token Text: '{token_text}'")
+    # Save vocabulary sample to a text file
+    vocab_file = os.path.join(output_dir, "vocabulary_sample.txt")
+    with open(vocab_file, 'w', encoding='utf-8') as f:
+        f.write(f"Sample of {encoding_name} vocabulary:\n")
+        f.write("-" * 50 + "\n")
+        for token_id, token_text in list(vocab_dict.items())[:n_samples]:
+            f.write(f"Token ID: {token_id:5d} | Token Text: '{token_text}'\n")
+    
+    print(f"Vocabulary sample saved to: {vocab_file}")
 
-def analyze_token_mapping(text, encoding_name="cl100k_base"):
+def analyze_token_mapping(text, output_dir, encoding_name="cl100k_base"):
     """Analyze how text is mapped to tokens and back."""
     enc = tiktoken.get_encoding(encoding_name)
     tokens = enc.encode(text)
     
-    print(f"\nToken mapping analysis for: '{text}'")
-    print("-" * 50)
-    print("Step 1: Text to Tokens")
-    print(f"Original text: {text}")
-    print(f"Token IDs: {tokens}")
+    # Save analysis to a text file
+    analysis_file = os.path.join(output_dir, f"token_mapping_{text[:20]}.txt")
+    with open(analysis_file, 'w', encoding='utf-8') as f:
+        f.write(f"Token mapping analysis for: '{text}'\n")
+        f.write("-" * 50 + "\n")
+        f.write("Step 1: Text to Tokens\n")
+        f.write(f"Original text: {text}\n")
+        f.write(f"Token IDs: {tokens}\n\n")
+        
+        f.write("Step 2: Individual Token Analysis\n")
+        for i, token in enumerate(tokens):
+            token_text = enc.decode([token])
+            f.write(f"Position {i+1}: Token ID {token:5d} → '{token_text}'\n")
+        
+        f.write("\nStep 3: Reconstruction\n")
+        reconstructed = enc.decode(tokens)
+        f.write(f"Reconstructed text: {reconstructed}\n")
+        f.write(f"Matches original: {text == reconstructed}\n")
     
-    print("\nStep 2: Individual Token Analysis")
-    for i, token in enumerate(tokens):
-        token_text = enc.decode([token])
-        print(f"Position {i+1}: Token ID {token:5d} → '{token_text}'")
-    
-    print("\nStep 3: Reconstruction")
-    reconstructed = enc.decode(tokens)
-    print(f"Reconstructed text: {reconstructed}")
-    print(f"Matches original: {text == reconstructed}")
+    print(f"Token mapping analysis saved to: {analysis_file}")
 
-def visualize_tokenization(text, filename):
+def visualize_tokenization(text, output_dir, filename):
     """Visualize how the text is broken down into tokens."""
     enc = tiktoken.get_encoding("cl100k_base")
     tokens = enc.encode(text)
@@ -69,10 +91,9 @@ def visualize_tokenization(text, filename):
     plt.title('Text Tokenization Visualization')
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, filename))
-    plt.close()
+    save_plot(plt, output_dir, filename)
 
-def compare_tokenization_variations(texts, filename):
+def compare_tokenization_variations(texts, output_dir, filename):
     """Compare tokenization of similar texts."""
     enc = tiktoken.get_encoding("cl100k_base")
     plt.figure(figsize=(15, len(texts) * 2))
@@ -93,10 +114,9 @@ def compare_tokenization_variations(texts, filename):
     plt.title('Comparison of Tokenization Across Similar Texts')
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, filename))
-    plt.close()
+    save_plot(plt, output_dir, filename)
 
-def analyze_token_stats(texts, filename):
+def analyze_token_stats(texts, output_dir, filename):
     """Analyze and visualize tokenization statistics."""
     enc = tiktoken.get_encoding("cl100k_base")
     token_counts = [len(enc.encode(text)) for text in texts]
@@ -107,10 +127,9 @@ def analyze_token_stats(texts, filename):
     plt.ylabel('Number of Tokens')
     plt.title('Token Count Comparison')
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, filename))
-    plt.close()
+    save_plot(plt, output_dir, filename)
 
-def compare_encodings():
+def compare_encodings(output_dir):
     """Compare different tiktoken encodings."""
     sample_text = "OpenAI develops GPT-4, an advanced AI model!"
     encodings = [
@@ -119,23 +138,30 @@ def compare_encodings():
         "r50k_base"     # Earlier models
     ]
     
-    print("\nComparing different encodings:")
-    print("-" * 50)
-    for encoding_name in encodings:
-        enc = tiktoken.get_encoding(encoding_name)
-        tokens = enc.encode(sample_text)
-        print(f"\n{encoding_name}:")
-        print(f"Number of tokens: {len(tokens)}")
-        print("Token breakdown:")
-        for token in tokens:
-            print(f"  {token:5d} → '{enc.decode([token])}'")
+    # Save comparison to a text file
+    comparison_file = os.path.join(output_dir, "encoding_comparison.txt")
+    with open(comparison_file, 'w', encoding='utf-8') as f:
+        f.write("Comparing different encodings:\n")
+        f.write("-" * 50 + "\n")
+        for encoding_name in encodings:
+            enc = tiktoken.get_encoding(encoding_name)
+            tokens = enc.encode(sample_text)
+            f.write(f"\n{encoding_name}:\n")
+            f.write(f"Number of tokens: {len(tokens)}\n")
+            f.write("Token breakdown:\n")
+            for token in tokens:
+                f.write(f"  {token:5d} → '{enc.decode([token])}'\n")
+    
+    print(f"Encoding comparison saved to: {comparison_file}")
 
 def main():
-    print(f"\nPlots will be saved to the '{output_dir}' directory.")
+    # Create output directory with timestamp
+    output_dir = ensure_output_directory()
+    print(f"\nAnalysis results will be saved to: {output_dir}")
     
     # Explore vocabulary first
     print("\nExploring tokenizer vocabulary...")
-    explore_vocabulary()
+    explore_vocabulary(output_dir)
     
     # Example texts for analysis
     examples = [
@@ -148,7 +174,7 @@ def main():
     
     # Analyze each example
     for example in examples:
-        analyze_token_mapping(example)
+        analyze_token_mapping(example, output_dir)
     
     # Create visualizations
     print("\nGenerating visualizations...")
@@ -161,17 +187,17 @@ def main():
         "What is the capital of Germany?"
     ]
     
-    visualize_tokenization(texts[0], "single_text_tokenization.png")
-    compare_tokenization_variations(texts, "text_comparison.png")
-    analyze_token_stats(texts, "token_stats.png")
+    visualize_tokenization(texts[0], output_dir, "single_text_tokenization.png")
+    compare_tokenization_variations(texts, output_dir, "text_comparison.png")
+    analyze_token_stats(texts, output_dir, "token_stats.png")
     
     # Special cases visualization
-    compare_tokenization_variations(examples, "special_cases.png")
+    compare_tokenization_variations(examples, output_dir, "special_cases.png")
     
     # Compare different encodings
-    compare_encodings()
+    compare_encodings(output_dir)
     
-    print(f"\nAll plots have been saved to the '{output_dir}' directory.")
+    print(f"\nAll analysis results have been saved to: {output_dir}")
 
 if __name__ == "__main__":
     main()
