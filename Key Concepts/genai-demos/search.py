@@ -9,17 +9,32 @@ import pandas as pd
 from collections import Counter
 import re
 import os
+from datetime import datetime
+from getpass import getpass
+
+def ensure_output_directory() -> str:
+    """Create and return the output directory path with timestamp."""
+    base_dir = "search_analysis"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = os.path.join(base_dir, f"analysis_{timestamp}")
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    return output_dir
+
+def get_api_key() -> str:
+    """Prompt for OpenAI API key with secure input."""
+    print("\nPlease enter your OpenAI API key.")
+    print("Note: The input will be hidden for security.")
+    api_key = getpass("API Key: ")
+    return api_key
 
 class SearchComparator:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, output_dir: str):
+        """Initialize with API key and output directory."""
         self.client = OpenAI(api_key=api_key)
         self.cache: Dict[str, np.ndarray] = {}
+        self.output_dir = output_dir
         
-        # Create visualization directory if it doesn't exist
-        self.viz_dir = "search_visualizations"
-        if not os.path.exists(self.viz_dir):
-            os.makedirs(self.viz_dir)
-    
     def get_search_type(self, query: str) -> str:
         """Determine the type of search based on the query."""
         search_types = {
@@ -71,12 +86,36 @@ class SearchComparator:
             
         return sorted(results, key=lambda x: x[1], reverse=True)
     
-    def save_visualization(self, fig, search_type: str, viz_type: str):
+    def save_visualization(self, fig, search_type: str, viz_type: str) -> str:
         """Save visualization with appropriate naming."""
         filename = f"{search_type}_{viz_type}.png"
-        filepath = os.path.join(self.viz_dir, filename)
+        filepath = os.path.join(self.output_dir, filename)
         fig.savefig(filepath)
         plt.close(fig)
+        print(f"Saved visualization to: {filepath}")
+        return filepath
+    
+    def save_results(self, query: str, keyword_results: List[Tuple[str, float]], 
+                    vector_results: List[Tuple[str, float]], search_type: str) -> str:
+        """Save search results to a text file."""
+        filename = f"{search_type}_results.txt"
+        filepath = os.path.join(self.output_dir, filename)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(f"Search Results Analysis for Query: '{query}'\n")
+            f.write("=" * 50 + "\n\n")
+            
+            f.write("Keyword Search Results:\n")
+            f.write("-" * 20 + "\n")
+            for doc, score in keyword_results:
+                f.write(f"Score: {score:.4f} | {doc}\n")
+            
+            f.write("\nVector Search Results:\n")
+            f.write("-" * 20 + "\n")
+            for doc, score in vector_results:
+                f.write(f"Score: {score:.4f} | {doc}\n")
+        
+        print(f"Saved search results to: {filepath}")
         return filepath
     
     def visualize_search_comparison(self, query: str, documents: List[str]):
@@ -86,6 +125,9 @@ class SearchComparator:
         # Get search results
         keyword_results = self.keyword_search(query, documents)
         vector_results = self.vector_search(query, documents)
+        
+        # Save results to file
+        self.save_results(query, keyword_results, vector_results, search_type)
         
         # Prepare data for visualization
         keyword_scores = [score for _, score in keyword_results]
@@ -104,7 +146,6 @@ class SearchComparator:
         ax1.set_xlabel('Document Index')
         ax1.set_ylabel('Normalized Score')
         
-        # Add value labels
         for bar in bars1:
             height = bar.get_height()
             ax1.text(bar.get_x() + bar.get_width()/2., height,
@@ -117,7 +158,6 @@ class SearchComparator:
         ax2.set_xlabel('Document Index')
         ax2.set_ylabel('Similarity Score')
         
-        # Add value labels
         for bar in bars2:
             height = bar.get_height()
             ax2.text(bar.get_x() + bar.get_width()/2., height,
@@ -127,7 +167,7 @@ class SearchComparator:
         plt.tight_layout()
         
         # Save comparison plot
-        comparison_path = self.save_visualization(fig, search_type, "comparison")
+        self.save_visualization(fig, search_type, "comparison")
         
         # Create embedding space visualization
         self.visualize_query_document_space(query, documents)
@@ -186,51 +226,46 @@ class SearchComparator:
             )
             
         plt.title('2D Visualization of Query and Documents in Embedding Space')
-        
-        # Save embedding visualization
-        embedding_path = self.save_visualization(fig, search_type, "embedding_space")
+        self.save_visualization(fig, search_type, "embedding_space")
 
 def demonstrate_search_comparison():
     """Demonstrate the differences between keyword and semantic search."""
-    comparator = SearchComparator("YOUR_API_KEY")
+    # Create output directory and get API key
+    output_dir = ensure_output_directory()
+    print(f"\nAnalysis results will be saved to: {output_dir}")
     
-    documents = [
-        "The rapid brown fox jumps over the lazy dog in the forest",
-        "A quick auburn canine leaps across a sleepy hound in the woods",
-        "The fox hunts for food in the dense woodland",
-        "Dogs and other canines play together in the park",
-        "A lazy afternoon in the garden with sleeping pets",
-        "Wild animals roaming through the forest at night",
-        "The weather is perfect for outdoor activities today",
-        "Forest creatures gather near the stream at dusk"
-    ]
-    
-    queries = [
-        "A fox jumping over a dog",  # Direct phrase match
-        "Canines in natural habitats",  # Semantic concept match
-        "Sleeping animals outdoors",  # Mixed concept match
-        "Forest wildlife activity"  # Thematic match
-    ]
-    
-    for query in queries:
-        print(f"\nAnalyzing search results for query: '{query}'")
-        search_type = comparator.get_search_type(query)
+    try:
+        # Get API key securely
+        api_key = get_api_key()
         
-        print("\nKeyword Search Results:")
-        keyword_results = comparator.keyword_search(query, documents)
-        for doc, score in keyword_results[:3]:
-            print(f"Score: {score:.4f} | {doc}")
+        # Initialize comparator
+        comparator = SearchComparator(api_key, output_dir)
+        
+        documents = [
+            "The rapid brown fox jumps over the lazy dog in the forest",
+            "A quick auburn canine leaps across a sleepy hound in the woods",
+            "The fox hunts for food in the dense woodland",
+            "Dogs and other canines play together in the park",
+            "A lazy afternoon in the garden with sleeping pets",
+            "Wild animals roaming through the forest at night",
+            "The weather is perfect for outdoor activities today",
+            "Forest creatures gather near the stream at dusk"
+        ]
+        
+        queries = [
+            "A fox jumping over a dog",  # Direct phrase match
+            "Canines in natural habitats",  # Semantic concept match
+            "Sleeping animals outdoors",  # Mixed concept match
+            "Forest wildlife activity"  # Thematic match
+        ]
+        
+        for query in queries:
+            print(f"\nAnalyzing search results for query: '{query}'")
+            comparator.visualize_search_comparison(query, documents)
             
-        print("\nVector Search Results:")
-        vector_results = comparator.vector_search(query, documents)
-        for doc, score in vector_results[:3]:
-            print(f"Score: {score:.4f} | {doc}")
-            
-        print("\nGenerating visualizations...")
-        comparator.visualize_search_comparison(query, documents)
-        print(f"Visualizations saved in '{comparator.viz_dir}' folder:")
-        print(f"- {search_type}_comparison.png")
-        print(f"- {search_type}_embedding_space.png")
+    except Exception as e:
+        print(f"\nError: {str(e)}")
+        print("Please check your API key and try again.")
 
 if __name__ == "__main__":
     demonstrate_search_comparison()
