@@ -92,12 +92,23 @@ class SearchComparator:
         filepath = os.path.join(self.output_dir, filename)
         fig.savefig(filepath)
         plt.close(fig)
-        print(f"Saved visualization to: {filepath}")
         return filepath
     
-    def save_results(self, query: str, keyword_results: List[Tuple[str, float]], 
-                    vector_results: List[Tuple[str, float]], search_type: str) -> str:
-        """Save search results to a text file."""
+    def print_and_save_results(self, query: str, keyword_results: List[Tuple[str, float]], 
+                             vector_results: List[Tuple[str, float]], search_type: str):
+        """Print results to console and save to file."""
+        # Print to console
+        print(f"\nAnalyzing search results for query: '{query}'")
+        
+        print("\nKeyword Search Results:")
+        for doc, score in keyword_results[:3]:  # Show top 3 results
+            print(f"Score: {score:.4f} | {doc}")
+        
+        print("\nVector Search Results:")
+        for doc, score in vector_results[:3]:  # Show top 3 results
+            print(f"Score: {score:.4f} | {doc}")
+        
+        # Save to file
         filename = f"{search_type}_results.txt"
         filepath = os.path.join(self.output_dir, filename)
         
@@ -114,9 +125,6 @@ class SearchComparator:
             f.write("-" * 20 + "\n")
             for doc, score in vector_results:
                 f.write(f"Score: {score:.4f} | {doc}\n")
-        
-        print(f"Saved search results to: {filepath}")
-        return filepath
     
     def visualize_search_comparison(self, query: str, documents: List[str]):
         """Create visualizations comparing keyword and vector search results."""
@@ -126,18 +134,33 @@ class SearchComparator:
         keyword_results = self.keyword_search(query, documents)
         vector_results = self.vector_search(query, documents)
         
-        # Save results to file
-        self.save_results(query, keyword_results, vector_results, search_type)
+        # Print and save results
+        self.print_and_save_results(query, keyword_results, vector_results, search_type)
         
-        # Prepare data for visualization
+        # Create visualizations
+        print("\nGenerating visualizations...")
+        
+        # Create and save comparison plot
+        fig1 = self.create_comparison_plot(keyword_results, vector_results, documents)
+        comparison_path = self.save_visualization(fig1, search_type, "comparison")
+        
+        # Create and save embedding space visualization
+        fig2 = self.visualize_query_document_space(query, documents)
+        embedding_path = self.save_visualization(fig2, search_type, "embedding_space")
+        
+        print(f"Visualizations saved as '{os.path.basename(comparison_path)}' and '{os.path.basename(embedding_path)}'")
+    
+    def create_comparison_plot(self, keyword_results: List[Tuple[str, float]], 
+                             vector_results: List[Tuple[str, float]], 
+                             documents: List[str]) -> plt.Figure:
+        """Create comparison plot of keyword and vector search results."""
         keyword_scores = [score for _, score in keyword_results]
         vector_scores = [score for _, score in vector_results]
         
-        # Normalize scores for comparison
+        # Normalize keyword scores
         max_keyword = max(keyword_scores) if keyword_scores else 1
         keyword_scores = [s/max_keyword for s in keyword_scores]
         
-        # Create comparison plot
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
         
         # Keyword search results
@@ -165,17 +188,10 @@ class SearchComparator:
                     ha='center', va='bottom')
         
         plt.tight_layout()
-        
-        # Save comparison plot
-        self.save_visualization(fig, search_type, "comparison")
-        
-        # Create embedding space visualization
-        self.visualize_query_document_space(query, documents)
+        return fig
     
-    def visualize_query_document_space(self, query: str, documents: List[str]):
+    def visualize_query_document_space(self, query: str, documents: List[str]) -> plt.Figure:
         """Create a 2D visualization of query and documents in embedding space."""
-        search_type = self.get_search_type(query)
-        
         # Get embeddings
         all_texts = [query] + documents
         embeddings = [self.get_embedding(text) for text in all_texts]
@@ -226,13 +242,12 @@ class SearchComparator:
             )
             
         plt.title('2D Visualization of Query and Documents in Embedding Space')
-        self.save_visualization(fig, search_type, "embedding_space")
+        return fig
 
 def demonstrate_search_comparison():
     """Demonstrate the differences between keyword and semantic search."""
     # Create output directory and get API key
     output_dir = ensure_output_directory()
-    print(f"\nAnalysis results will be saved to: {output_dir}")
     
     try:
         # Get API key securely
@@ -241,6 +256,7 @@ def demonstrate_search_comparison():
         # Initialize comparator
         comparator = SearchComparator(api_key, output_dir)
         
+        # Test documents
         documents = [
             "The rapid brown fox jumps over the lazy dog in the forest",
             "A quick auburn canine leaps across a sleepy hound in the woods",
@@ -252,6 +268,7 @@ def demonstrate_search_comparison():
             "Forest creatures gather near the stream at dusk"
         ]
         
+        # Test queries
         queries = [
             "A fox jumping over a dog",  # Direct phrase match
             "Canines in natural habitats",  # Semantic concept match
@@ -260,7 +277,6 @@ def demonstrate_search_comparison():
         ]
         
         for query in queries:
-            print(f"\nAnalyzing search results for query: '{query}'")
             comparator.visualize_search_comparison(query, documents)
             
     except Exception as e:
