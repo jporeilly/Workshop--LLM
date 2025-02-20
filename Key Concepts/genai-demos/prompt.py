@@ -3,6 +3,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import textwrap
+import os
+from getpass import getpass
+from datetime import datetime
+
+def ensure_output_directory():
+    """Create output directory for visualizations if it doesn't exist."""
+    output_dir = "embedding_visualizations"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    return output_dir
+
+def save_plot(plt, filename):
+    """Save the current plot to the visualizations directory."""
+    output_dir = ensure_output_directory()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    full_path = os.path.join(output_dir, f"{filename}_{timestamp}.png")
+    plt.savefig(full_path)
+    print(f"Saved visualization to: {full_path}")
+    plt.close()
 
 def create_embedding(text, client):
     """Create an embedding for the given text."""
@@ -44,7 +63,7 @@ def visualize_embedding_stats(embedding):
     plt.title('Vector Statistics')
     
     plt.tight_layout()
-    plt.show()
+    save_plot(plt, "embedding_stats")
 
 def compare_similar_texts(client):
     """Compare embeddings of similar but different texts."""
@@ -84,31 +103,46 @@ def compare_similar_texts(client):
     plt.yticks(range(len(texts)), [textwrap.fill(t, 15) for t in texts])
     plt.title('Cosine Similarity Between Different Prompts')
     plt.tight_layout()
-    plt.show()
+    save_plot(plt, "similarity_matrix")
+
+def get_api_key():
+    """Prompt for OpenAI API key with secure input."""
+    print("\nPlease enter your OpenAI API key.")
+    print("Note: The input will be hidden for security.")
+    api_key = getpass("API Key: ")
+    return api_key
 
 def main():
-    # Initialize OpenAI client
-    client = OpenAI(api_key="YOUR_API_KEY")
+    # Get API key from user
+    api_key = get_api_key()
     
-    # Original prompt
-    text_prompt = "What is the capital of France?"
-    print(f"\nCreating embedding for: '{text_prompt}'")
-    
-    # Create and analyze the embedding
-    embedding = create_embedding(text_prompt, client)
-    
-    print(f"\nEmbedding shape: {embedding.shape}")
-    print(f"Number of dimensions: {len(embedding)}")
-    print("\nFirst 10 dimensions of the embedding vector:")
-    print(embedding[:10])
-    
-    # Visualize the embedding
-    print("\nVisualizing embedding statistics...")
-    visualize_embedding_stats(embedding)
-    
-    # Compare similar texts
-    print("\nComparing similar texts...")
-    compare_similar_texts(client)
+    try:
+        # Initialize OpenAI client
+        client = OpenAI(api_key=api_key)
+        
+        # Original prompt
+        text_prompt = "What is the capital of France?"
+        print(f"\nCreating embedding for: '{text_prompt}'")
+        
+        # Create and analyze the embedding
+        embedding = create_embedding(text_prompt, client)
+        
+        print(f"\nEmbedding shape: {embedding.shape}")
+        print(f"Number of dimensions: {len(embedding)}")
+        print("\nFirst 10 dimensions of the embedding vector:")
+        print(embedding[:10])
+        
+        # Visualize the embedding
+        print("\nVisualizing embedding statistics...")
+        visualize_embedding_stats(embedding)
+        
+        # Compare similar texts
+        print("\nComparing similar texts...")
+        compare_similar_texts(client)
+        
+    except Exception as e:
+        print(f"\nError: {str(e)}")
+        print("Please check your API key and try again.")
 
 if __name__ == "__main__":
     main()
