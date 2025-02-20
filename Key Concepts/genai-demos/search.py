@@ -8,16 +8,28 @@ import seaborn as sns
 import pandas as pd
 from collections import Counter
 import re
+import os
 
 class SearchComparator:
-    """
-    A class to compare different search methodologies: keyword-based vs semantic/vector search
-    """
     def __init__(self, api_key: str):
-        """Initialize with OpenAI credentials."""
         self.client = OpenAI(api_key=api_key)
         self.cache: Dict[str, np.ndarray] = {}
         
+        # Create visualization directory if it doesn't exist
+        self.viz_dir = "search_visualizations"
+        if not os.path.exists(self.viz_dir):
+            os.makedirs(self.viz_dir)
+    
+    def get_search_type(self, query: str) -> str:
+        """Determine the type of search based on the query."""
+        search_types = {
+            "A fox jumping over a dog": "direct_phrase_match",
+            "Canines in natural habitats": "semantic_concept_match",
+            "Sleeping animals outdoors": "mixed_concept_match",
+            "Forest wildlife activity": "thematic_match"
+        }
+        return search_types.get(query, "custom_search")
+    
     def get_embedding(self, text: str) -> np.ndarray:
         """Generate embedding vector for input text."""
         if text in self.cache:
@@ -33,30 +45,19 @@ class SearchComparator:
         return embedding
     
     def keyword_search(self, query: str, documents: List[str]) -> List[Tuple[str, float]]:
-        """
-        Perform traditional keyword-based search using TF-IDF like scoring.
-        
-        Returns: List of (document, score) tuples
-        """
-        # Tokenize query and documents
+        """Perform traditional keyword-based search using TF-IDF like scoring."""
         query_tokens = set(re.findall(r'\w+', query.lower()))
         
         results = []
         for doc in documents:
             doc_tokens = Counter(re.findall(r'\w+', doc.lower()))
-            
-            # Calculate simple TF score
             score = sum(doc_tokens[token] for token in query_tokens if token in doc_tokens)
             results.append((doc, score))
             
         return sorted(results, key=lambda x: x[1], reverse=True)
     
     def vector_search(self, query: str, documents: List[str]) -> List[Tuple[str, float]]:
-        """
-        Perform vector-based semantic search using embeddings.
-        
-        Returns: List of (document, similarity_score) tuples
-        """
+        """Perform vector-based semantic search using embeddings."""
         query_embedding = self.get_embedding(query)
         results = []
         
@@ -70,10 +71,18 @@ class SearchComparator:
             
         return sorted(results, key=lambda x: x[1], reverse=True)
     
+    def save_visualization(self, fig, search_type: str, viz_type: str):
+        """Save visualization with appropriate naming."""
+        filename = f"{search_type}_{viz_type}.png"
+        filepath = os.path.join(self.viz_dir, filename)
+        fig.savefig(filepath)
+        plt.close(fig)
+        return filepath
+    
     def visualize_search_comparison(self, query: str, documents: List[str]):
-        """
-        Create visualizations comparing keyword and vector search results.
-        """
+        """Create visualizations comparing keyword and vector search results."""
+        search_type = self.get_search_type(query)
+        
         # Get search results
         keyword_results = self.keyword_search(query, documents)
         vector_results = self.vector_search(query, documents)
@@ -90,37 +99,62 @@ class SearchComparator:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
         
         # Keyword search results
-        ax1.bar(range(len(documents)), keyword_scores, alpha=0.6)
+        bars1 = ax1.bar(range(len(documents)), keyword_scores, alpha=0.6)
         ax1.set_title('Keyword Search Results')
         ax1.set_xlabel('Document Index')
         ax1.set_ylabel('Normalized Score')
         
+        # Add value labels
+        for bar in bars1:
+            height = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.2f}',
+                    ha='center', va='bottom')
+        
         # Vector search results
-        ax2.bar(range(len(documents)), vector_scores, alpha=0.6)
+        bars2 = ax2.bar(range(len(documents)), vector_scores, alpha=0.6)
         ax2.set_title('Vector Search Results')
         ax2.set_xlabel('Document Index')
         ax2.set_ylabel('Similarity Score')
         
+        # Add value labels
+        for bar in bars2:
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.2f}',
+                    ha='center', va='bottom')
+        
         plt.tight_layout()
-        plt.show()
         
-        # Visualize embeddings in 2D
+        # Save comparison plot
+        comparison_path = self.save_visualization(fig, search_type, "comparison")
+        
+        # Create embedding space visualization
         self.visualize_query_document_space(query, documents)
-        
+    
     def visualize_query_document_space(self, query: str, documents: List[str]):
-        """
-        Create a 2D visualization of query and documents in embedding space.
-        """
-        # Get embeddings for query and documents
+        """Create a 2D visualization of query and documents in embedding space."""
+        search_type = self.get_search_type(query)
+        
+        # Get embeddings
         all_texts = [query] + documents
         embeddings = [self.get_embedding(text) for text in all_texts]
         embeddings_matrix = np.vstack(embeddings)
         
-        # Reduce dimensionality for visualization
-        tsne = TSNE(n_components=2, random_state=42)
+        # Calculate appropriate perplexity
+        n_samples = len(all_texts)
+        perplexity = min(30, n_samples - 1)
+        
+        # Reduce dimensionality
+        tsne = TSNE(
+            n_components=2,
+            random_state=42,
+            perplexity=perplexity,
+            max_iter=1000
+        )
         reduced_embeddings = tsne.fit_transform(embeddings_matrix)
         
-        # Create DataFrame for plotting
+        # Create DataFrame
         df = pd.DataFrame(
             reduced_embeddings,
             columns=['x', 'y']
@@ -128,26 +162,38 @@ class SearchComparator:
         df['type'] = ['Query'] + ['Document'] * len(documents)
         df['text'] = all_texts
         
-        # Plot
-        plt.figure(figsize=(12, 8))
-        sns.scatterplot(data=df, x='x', y='y', hue='type', style='type', s=100)
+        # Create visualization
+        fig = plt.figure(figsize=(12, 8))
+        sns.scatterplot(
+            data=df, 
+            x='x', 
+            y='y', 
+            hue='type',
+            style='type',
+            s=100,
+            palette={'Query': 'red', 'Document': 'blue'}
+        )
         
-        # Add text labels
+        # Add labels
         for idx, row in df.iterrows():
             text = f"Query" if idx == 0 else f"Doc {idx}"
-            plt.annotate(text, (row['x'], row['y']), xytext=(5, 5), textcoords='offset points')
+            plt.annotate(
+                text,
+                (row['x'], row['y']),
+                xytext=(5, 5),
+                textcoords='offset points',
+                bbox=dict(facecolor='white', edgecolor='none', alpha=0.7)
+            )
             
         plt.title('2D Visualization of Query and Documents in Embedding Space')
-        plt.show()
+        
+        # Save embedding visualization
+        embedding_path = self.save_visualization(fig, search_type, "embedding_space")
 
 def demonstrate_search_comparison():
-    """
-    Demonstrate the differences between keyword and semantic search.
-    """
-    # Initialize comparator (replace with your API key)
+    """Demonstrate the differences between keyword and semantic search."""
     comparator = SearchComparator("YOUR_API_KEY")
     
-    # Example corpus with various phrasings and concepts
     documents = [
         "The rapid brown fox jumps over the lazy dog in the forest",
         "A quick auburn canine leaps across a sleepy hound in the woods",
@@ -159,7 +205,6 @@ def demonstrate_search_comparison():
         "Forest creatures gather near the stream at dusk"
     ]
     
-    # Example searches to demonstrate differences
     queries = [
         "A fox jumping over a dog",  # Direct phrase match
         "Canines in natural habitats",  # Semantic concept match
@@ -167,9 +212,10 @@ def demonstrate_search_comparison():
         "Forest wildlife activity"  # Thematic match
     ]
     
-    # Run demonstrations for each query
     for query in queries:
         print(f"\nAnalyzing search results for query: '{query}'")
+        search_type = comparator.get_search_type(query)
+        
         print("\nKeyword Search Results:")
         keyword_results = comparator.keyword_search(query, documents)
         for doc, score in keyword_results[:3]:
@@ -180,9 +226,11 @@ def demonstrate_search_comparison():
         for doc, score in vector_results[:3]:
             print(f"Score: {score:.4f} | {doc}")
             
-        # Visualize comparisons
         print("\nGenerating visualizations...")
         comparator.visualize_search_comparison(query, documents)
+        print(f"Visualizations saved in '{comparator.viz_dir}' folder:")
+        print(f"- {search_type}_comparison.png")
+        print(f"- {search_type}_embedding_space.png")
 
 if __name__ == "__main__":
     demonstrate_search_comparison()
