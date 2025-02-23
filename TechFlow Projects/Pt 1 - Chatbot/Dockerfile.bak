@@ -1,4 +1,4 @@
-# Base image setup
+# Base image setup - using Ubuntu base image
 FROM ubuntu:22.04
 
 # Prevent interactive prompts during build
@@ -6,11 +6,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV ACCEPT_EULA=Y
 
 # Install system dependencies and development tools
-# - software-properties-common: Adds apt repository management
-# - build-essential: Provides compilation tools (gcc, make)
-# - libopenblas-dev: Optimized linear algebra library
-# - ninja-build: Fast build system
-# - Additional tools: git, curl, node.js, etc.
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y \
@@ -45,7 +40,7 @@ ENV WASMEDGE_HOME="/root/.wasmedge"
 WORKDIR /app
 RUN mkdir -p models scripts logs chatbot-ui
 
-# Download the LLaMA language model
+# Download the Llama 3 model
 WORKDIR /app/models
 RUN curl -L "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf" -o llama3-8b-instruct.gguf
 
@@ -70,11 +65,7 @@ ENV DEBIAN_FRONTEND=dialog
 # Set working directory for runtime
 WORKDIR /app
 
-# Create startup script that:
-# - Initializes logging
-# - Starts API server with LLaMA model
-# - Verifies API server is running
-# - Launches UI server with proxy to API
+# Create startup script that dynamically selects CPU or GPU mode based on availability
 RUN echo '#!/bin/bash\n\
 \n\
 # Function to log messages with timestamps\n\
@@ -87,12 +78,29 @@ mkdir -p /app/logs\n\
 touch /app/logs/api.log\n\
 touch /app/logs/ui.log\n\
 \n\
-# Start API server in background\n\
+# Check for GPU availability\n\
+if command -v nvidia-smi &> /dev/null; then\n\
+    log_message "NVIDIA GPU detected, checking status:"\n\
+    nvidia-smi\n\
+    GPU_AVAILABLE=true\n\
+    log_message "Will use CUDA backend"\n\
+    BACKEND="CUDA"\n\
+    GPU_PARAMS="--n-gpu-layers 35"\n\
+else\n\
+    log_message "No NVIDIA GPU detected, using CPU mode"\n\
+    GPU_AVAILABLE=false\n\
+    BACKEND="AUTO"\n\
+    GPU_PARAMS=""\n\
+fi\n\
+\n\
+# Start API server in background with appropriate hardware settings\n\
 log_message "Starting API server..."\n\
 cd /app && wasmedge --dir .:. \\\n\
-    --nn-preload default:GGML:AUTO:models/llama3-8b-instruct.gguf \\\n\
+    --nn-preload default:GGML:${BACKEND}:models/llama3-8b-instruct.gguf \\\n\
     llama-api-server.wasm \\\n\
     --prompt-template llama-3-chat \\\n\
+    --ctx-size 8192 \\\n\
+    ${GPU_PARAMS} \\\n\
     --socket-addr "0.0.0.0:8080" > /app/logs/api.log 2>&1 &\n\
 API_PID=$!\n\
 \n\
