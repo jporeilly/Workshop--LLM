@@ -6,24 +6,24 @@ This guide explains how to use WasmEdge for running LLM inference using the comm
 
 ### Basic Query (128 tokens)
 ```bash
-wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm --n-predict 128 --log-enable --prompt "What is a Pentaho Data Integration transformation?"
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm --n-predict 128 --log-enable --prompt "What is a Pentaho Data Integration transformation?"
 ```
 
 ### Technical Query (256 tokens)
 ```bash
-wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm --n-predict 256 --log-enable --prompt "Explain the key components of a Kettle transformation and their interactions."
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm --n-predict 256 --log-enable --prompt "Explain the key components of a Kettle transformation and their interactions."
 ```
 
 ### Code Example Query (400 tokens)
 ```bash
-wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm --n-predict 400 --log-enable --prompt "Show me a JavaScript example of data transformation using arrays and objects"
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm --n-predict 400 --log-enable --prompt "Show me a JavaScript example of data transformation using arrays and objects"
 ```
 
 ## Quick Setup Commands
 
 ### Create Alias (Single Line)
 ```bash
-echo 'alias llamaquery="wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm"' >> ~/.bashrc && source ~/.bashrc
+echo 'alias llamaquery="wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm"' >> ~/.bashrc && source ~/.bashrc
 ```
 
 ### Create Basic Script
@@ -32,7 +32,7 @@ Copy all lines below and paste into terminal:
 cat << 'EOF' > query.sh
 #!/bin/bash
 DEFAULT_TOKENS=256
-wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm --n-predict ${2:-$DEFAULT_TOKENS} --log-enable --prompt "$1"
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm --n-predict ${2:-$DEFAULT_TOKENS} --log-enable --prompt "$1"
 EOF
 chmod +x query.sh
 ```
@@ -53,7 +53,7 @@ case $CONTEXT_TYPE in
   "code") SYSTEM_CONTEXT="$CODE_CONTEXT" ;;
   *) SYSTEM_CONTEXT="" ;;
 esac
-wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm --n-predict ${2:-$DEFAULT_TOKENS} --log-enable --prompt "<|begin_of_text|><|start_header_id|>system<|end_header_id|>$SYSTEM_CONTEXT<|eot_id|><|start_header_id|>user<|end_header_id|>$1<|eot_id|>"
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm --n-predict ${2:-$DEFAULT_TOKENS} --log-enable --prompt "<|begin_of_text|><|start_header_id|>system<|end_header_id|>$SYSTEM_CONTEXT<|eot_id|><|start_header_id|>user<|end_header_id|>$1<|eot_id|>"
 EOF
 chmod +x advanced-query.sh
 ```
