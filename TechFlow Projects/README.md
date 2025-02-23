@@ -20,24 +20,10 @@ Contains configuration for building a Docker container with LLaMA 3 chatbot.
    ```bash
    docker run -p 3000:3000 -p 8080:8080 techflow-chatbot
    ```
-3. Access the chat interface at `http://localhost:3000`
+3. Access the chat interface at `http://0.0.0.0:8080`
 4. The API server runs on port 8080 if you need direct access
 
 **Note:** Requires Docker installed and about 15GB disk space for the model and container.
-
-## Dockerfile.qwen
-Alternative setup using the smaller Qwen model, ideal for systems with less resources.
-
-**How to Use:**
-1. Build the Qwen container:
-   ```bash
-   docker build -f Dockerfile.qwen -t techflow-chatbot .
-   ```
-2. Run similarly to LLaMA container:
-   ```bash
-   docker run -p 3000:3000 -p 8080:8080 techflow-chatbot
-   ```
-3. Access the same way via `http://localhost:3000`
 
 **Key Differences from LLaMA:**
 - Smaller model size (3B vs 8B parameters)
@@ -50,7 +36,7 @@ A command-line interface guide for running direct LLM queries.
 **How to Use:**
 1. For quick questions, use the basic query command:
    ```bash
-   wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/llama3-8b-instruct.gguf llama-simple.wasm --n-predict 128 --prompt "Your question"
+   wasmedge --dir .:. --nn-preload default:GGML:AUTO:/app/models/qwen-3b-instruct.gguf llama-simple.wasm --n-predict 128 --prompt "Your question"
    ```
 2. For convenience, set up the provided alias or scripts to avoid typing long commands
 3. Use different token lengths based on your needs:
