@@ -107,7 +107,7 @@ log_message "Starting API server..."\n\
 cd /app && wasmedge --dir .:. \\\n\
     --nn-preload default:GGML:AUTO:models/qwen-3b-instruct.gguf \\\n\
     llama-api-server.wasm \\\n\
-    --prompt-template llama-3-chat \\\n\
+    --prompt-template chatml \\\n\
     --socket-addr "0.0.0.0:8080" > /app/logs/api.log 2>&1 &\n\
 API_PID=$!\n\
 \n\
