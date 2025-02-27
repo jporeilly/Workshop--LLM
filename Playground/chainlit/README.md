@@ -1,25 +1,26 @@
 ## RAG - Chainlit
 
 ### Setup
-1. Clone the repo and navigate to the folder
+1. Clone the repo and navigate to the folder:
     ```
     git clone https://github.com/jporeilly/Workshop--LLM.git
-    cd Workshop--LLM/Playground/chainlit
+    cd  Workshop--LLM/Playground/chainlit
     ls
     ```
 
-2. Ensure `uv` is installed,
-    - If not installed: [UV Getting Started](https://docs.astral.sh/uv/getting-started/installation/)
+2. Ensure `uv` is installed:
+    - Installation: [UV Getting Started](https://docs.astral.sh/uv/getting-started/installation/)
 
-3. Install the required packages - creates virtual env.
+3. Install the required packages - creates virtual env:
     ```
+    cd  Workshop--LLM/Playground/chainlit
     uv sync
     ```
 
 4. Qdrant Docker container. Set qdrant url in the `.env` file.
 
     Qdrant documentation: [Qdrant Documentation](https://qdrant.tech/documentation/quickstart/)
-        ```
+    
     - Rename `.env.example` to `.env`
     - Provide your env variables inside it as shown below.
     ```
@@ -35,6 +36,7 @@
 
 5. Run the chainlit app
     ```
-    uv run ingest.py
+    cd  Workshop--LLM/Playground/chainlit
+    uv run setup-rag.py
     uv run chainlit run rag-chainlit-deepseek.py
     ```
