@@ -4,7 +4,7 @@
 1. Clone the repo and navigate to the folder
     ```
     git clone https://github.com/jporeilly/Workshop--LLM.git
-    cd Workshop--LLM/playground/chainlit
+    cd Workshop--LLM/Playground/chainlit
     ls
     ```
 
