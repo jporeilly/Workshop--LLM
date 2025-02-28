@@ -15,6 +15,6 @@
 
 4. Install the required packages - creates virtual env:
     ```
-    cd  Workshop--LLM/Playground/chainlit
+    cd  Workshop--LLM/Playground/agno
     uv sync
     ```
