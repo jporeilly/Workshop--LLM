@@ -1,28 +1,5 @@
 ## Llamaparse 
 
-
-
-4. Provide environment variables from [openai](https://platform.openai.com/settings/organization/api-keys). If you use Qdrant cloud, then here is the link -> [Qdrant Cloud](https://cloud.qdrant.io/) in the `.env` file.
-    - Rename `.env.example` to `.env`
-    - Provide your env variables inside it as shown below.
-    ```
-    OPENAI_API_KEY="xxxxx"
-    QDRANT_URL="xxxxx"
-    QDRANT_API_KEY="xxxxx"
-    QDRANT_URL_LOCALHOST="xxxxx"
-    ```
-    - If you need more info about Qdrant, refer to the [ths video](https://youtu.be/JSKZYgARffg?si=0Jf7jxfMYzrPR0w5) I created about Qdrant.
-
-    IF YOU WANT TO RUN QDRANT LOCALLY, INSTALL [DOCKER](https://www.docker.com/get-started/) FIRST, HERE IS THE [LINK](https://qdrant.tech/documentation/quickstart/)
-    ```
-    docker pull qdrant/qdrant
-    docker run -p 6333:6333 -p 6334:6334 \
-    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
-    qdrant/qdrant
-    
-    ```
-4. Follow along with me in the video.
-
 ### Setup
 1. Clone the repo and navigate to the folder:
     ```
@@ -34,13 +11,7 @@
 2. Ensure `uv` is installed:
     - Installation: [UV Getting Started](https://docs.astral.sh/uv/getting-started/installation/)
 
-3. Install the required packages - creates virtual env:
-    ```
-    cd  Workshop--LLM/Playground/agentic-rag
-    uv sync
-    ```
-
-4. Qdrant Docker container.
+3. Qdrant Docker container.
 
     Set qdrant url in the `.env` file.
      [openai](https://platform.openai.com/settings/organization/api-keys). 
@@ -50,6 +21,10 @@
 
     - Rename `.env.example` to `.env`
     - Provide your env variables inside it as shown below.
+
+    [openai](https://platform.openai.com/settings/organization/api-keys)
+    [Qdrant Cloud](https://cloud.qdrant.io/) - if using cloud
+
     ```
     OPENAI_API_KEY="xxxxx"
     QDRANT_URL="xxxxx"
@@ -63,6 +38,14 @@
     -v $(pwd)/qdrant_storage:/qdrant/storage:z \
     qdrant/qdrant
     ```
+
+4. Install the required packages - creates virtual env:
+    ```
+    cd  Workshop--LLM/Playground/agentic-rag
+    uv sync
+    ```
+
+5. 
 
 ## Agentic RAG Advantages
 

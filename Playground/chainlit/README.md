@@ -11,13 +11,7 @@
 2. Ensure `uv` is installed:
     - Installation: [UV Getting Started](https://docs.astral.sh/uv/getting-started/installation/)
 
-3. Install the required packages - creates virtual env:
-    ```
-    cd  Workshop--LLM/Playground/chainlit
-    uv sync
-    ```
-
-4. Qdrant Docker container. Set qdrant url in the `.env` file.
+3. Qdrant Docker container. Set qdrant url in the `.env` file.
 
     Qdrant documentation: [Qdrant Documentation](https://qdrant.tech/documentation/quickstart/)
     
@@ -34,9 +28,15 @@
     qdrant/qdrant
     ```
 
+4. Install the required packages - creates virtual env:
+    ```
+    cd  Workshop--LLM/Playground/chainlit
+    uv sync
+    ```
+
 5. Run the chainlit app
     ```
     cd  Workshop--LLM/Playground/chainlit
     uv run setup-rag.py
-    uv run chainlit run rag-chainlit-deepseek.py
+    uv run chainlit run rag-chainlit-deepseek.py -p 8501
     ```
