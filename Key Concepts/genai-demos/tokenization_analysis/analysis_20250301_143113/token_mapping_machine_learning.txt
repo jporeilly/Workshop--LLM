@@ -1,0 +1,13 @@
+Token mapping analysis for: 'machine learning'
+--------------------------------------------------
+Step 1: Text to Tokens
+Original text: machine learning
+Token IDs: [33156, 6975]
+
+Step 2: Individual Token Analysis
+Position 1: Token ID 33156 → 'machine'
+Position 2: Token ID  6975 → ' learning'
+
+Step 3: Reconstruction
+Reconstructed text: machine learning
+Matches original: True
