@@ -46,7 +46,7 @@ def save_plot(plt, filename):
     print(f"Saved visualization to: {full_path}")
     plt.close()  # Close the plot to free up memory and prevent display overlap
 
-def create_embedding(text):
+def create_embedding(text, client):
     """
     Create an embedding for the given text using Ollama's llama3.2:latest model.
     
@@ -54,32 +54,24 @@ def create_embedding(text):
     for the provided text. Embeddings are numerical representations of text that
     capture semantic meaning in a high-dimensional vector space.
     
-    The Ollama client handles the API communication details, including:
-    - Formatting the request correctly
-    - Sending it to the Ollama server
-    - Parsing the response
-    - Handling potential errors
-    
     Args:
         text (str): The text to generate an embedding for
+        client: Ollama client instance
     
     Returns:
         numpy.ndarray: The embedding vector as a numpy array
         
     Notes:
-        - The Ollama client must be configured before calling this function
         - The model "llama3.2:latest" must be available in your Ollama installation
         - The returned embedding dimensions depend on the specific model
     """
     # Generate the embedding using the llama3.2:latest model
-    # The embeddings() function sends a request to the Ollama API endpoint
-    # and returns a dictionary containing the embedding and metadata
-    response = ollama.embeddings(
+    response = client.embeddings(
         model="llama3.2:latest",  # Specify which model to use for embedding
         prompt=text  # The text input to embed
     )
     
-    # The response contains a key "embedding" with the vector data
+    # The response contains the embedding data
     # Convert this to a numpy array for easier mathematical operations
     return np.array(response["embedding"])
 
@@ -130,7 +122,7 @@ def visualize_embedding_stats(embedding):
     plt.tight_layout()  # Adjust spacing between subplots for better appearance
     save_plot(plt, "embedding_stats")  # Save the visualization
 
-def compare_similar_texts():
+def compare_similar_texts(client):
     """
     Compare embeddings of semantically similar and different texts.
     
@@ -144,6 +136,9 @@ def compare_similar_texts():
     The test phrases include similar questions about France's capital,
     and a different question about Germany's capital to show contrast.
     This helps visualize how the embedding model captures semantic similarity.
+    
+    Args:
+        client: Ollama client instance
     """
     # Define a set of test phrases to compare
     # First three are semantically related, fourth is different
@@ -157,7 +152,7 @@ def compare_similar_texts():
     # Create embeddings for all texts using the Ollama client
     print("Generating embeddings for comparison texts...")
     # List comprehension to get embeddings for each text in the list
-    embeddings = [create_embedding(text) for text in texts]
+    embeddings = [create_embedding(text, client) for text in texts]
     
     # Define cosine similarity calculation function
     def cosine_similarity(a, b):
@@ -165,7 +160,7 @@ def compare_similar_texts():
         Calculate the cosine similarity between two vectors.
         
         Cosine similarity is defined as the cosine of the angle between two vectors.
-        It's a measure of similarity between -1 (exactly opposite) and 1 (exactly the same).
+        It's a measure of similarity between -1 (opposite) and 1 (identical).
         For embeddings, higher values indicate more similar meanings.
         
         The formula is: cos(θ) = (a·b)/(||a||·||b||)
@@ -218,48 +213,48 @@ def compare_similar_texts():
     plt.tight_layout()  # Adjust layout to make room for rotated x-axis labels
     save_plot(plt, "similarity_matrix")  # Save the visualization
 
-def configure_ollama_client():
+def get_ollama_client():
     """
-    Configure the Ollama client to connect to the Ollama server.
+    Create and configure an Ollama client.
     
     This function:
-    1. Sets up the Ollama client with the default local server settings
-    2. Only asks for a custom URL if running remotely is needed
-    
-    The Ollama Python client requires a host URL because Ollama runs as
-    an HTTP server that the client connects to. By default, it runs on
-    localhost port 11434.
+    1. Creates a default Ollama client
+    2. Offers option to connect to a non-default Ollama server
     
     Returns:
-        None - The function configures the global Ollama client
+        Ollama client instance
     """
-    # Set default Ollama server location
+    # Default Ollama server location
     default_host = "http://localhost:11434"
     
-    # Set up the client with the default host
-    ollama.set_host(default_host)
-    
-    # Ask if user wants to use a non-default Ollama server
     print("\nOllama Connection Configuration")
     print("==============================")
-    print(f"Using default Ollama server at {default_host}")
+    print(f"Default Ollama server address: {default_host}")
+    
+    # Ask if user wants to use a non-default Ollama server
     change_host = input("Connect to a different Ollama server? (y/N): ").lower()
     
-    # If user wants to change the host, prompt for new host
+    # Create client with specified host or default
     if change_host == 'y' or change_host == 'yes':
         custom_host = input("Enter Ollama server URL: ")
         if custom_host:
-            ollama.set_host(custom_host)
-            print(f"Now using Ollama server at {custom_host}")
+            client = ollama.Client(host=custom_host)
+            print(f"Using Ollama server at {custom_host}")
         else:
             print(f"No URL provided, using default {default_host}")
+            client = ollama.Client(host=default_host)
+    else:
+        client = ollama.Client(host=default_host)
+        print(f"Using default Ollama server at {default_host}")
+    
+    return client
 
 def main():
     """
     Main function to run the embedding visualization workflow.
     
     This function orchestrates the entire process:
-    1. Configures the Ollama client
+    1. Creates and configures an Ollama client
     2. Creates an embedding for a test prompt
     3. Displays basic information about the embedding
     4. Visualizes the embedding statistics
@@ -276,8 +271,8 @@ def main():
     print("This script will generate embeddings using Ollama and create")
     print("visualizations to help understand the embedding properties.")
     
-    # Configure the Ollama client
-    configure_ollama_client()
+    # Create and configure the Ollama client
+    client = get_ollama_client()
     
     try:
         # Test prompt for embedding
@@ -286,7 +281,7 @@ def main():
         
         # Create and analyze the embedding
         print("Requesting embedding from Ollama API...")
-        embedding = create_embedding(text_prompt)
+        embedding = create_embedding(text_prompt, client)
         
         # Display basic information about the embedding
         print(f"\nEmbedding shape: {embedding.shape}")
@@ -300,7 +295,7 @@ def main():
         
         # Compare similar texts
         print("\nComparing similar texts...")
-        compare_similar_texts()
+        compare_similar_texts(client)
         
         print("\nAll visualizations completed successfully!")
         print("Check the 'embedding_visualizations' directory for output files.")
@@ -321,7 +316,8 @@ def main():
         print("   - Confirm the port number is correct (usually 11434)")
         print("\n4. Check that the Ollama Python package is installed")
         print("   - Run 'pip install ollama' in your environment")
-        print("   - Ensure you're using the same Python environment as your other packages")
+        print("   - Ensure you're using the Python environment as your other packages")
+        print(f"\nDetailed error: {type(e).__name__}: {str(e)}")
 
 if __name__ == "__main__":
     """
@@ -329,8 +325,5 @@ if __name__ == "__main__":
     
     This conditional ensures the main() function is only executed when 
     the script is run directly (not when imported as a module).
-    
-    The Python interpreter sets the __name__ variable to "__main__" when
-    the file is executed directly, rather than being imported.
     """
     main()
