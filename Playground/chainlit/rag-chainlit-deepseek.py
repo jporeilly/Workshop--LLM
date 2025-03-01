@@ -43,10 +43,37 @@ qdrant_url = os.getenv("QDRANT_URL_LOCALHOST")  # URL for the local Qdrant insta
 EMBED_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
 
 
+# Check if the model exists and download if needed
+import subprocess
+import json
+
+def check_and_download_model(model_name):
+    try:
+        # List all models
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, check=True)
+        model_list = result.stdout.strip().split('\n')
+        
+        # Skip header row and check if our model exists
+        model_exists = any(model_name in model_line for model_line in model_list[1:] if model_line)
+        
+        if not model_exists:
+            print(f"Model {model_name} not found. Downloading...")
+            subprocess.run(["ollama", "pull", model_name], check=True)
+            print(f"Downloaded {model_name} successfully.")
+        else:
+            print(f"Model {model_name} is already available.")
+            
+    except subprocess.CalledProcessError as e:
+        print(f"Error checking or downloading model: {e}")
+        raise
+
+# Check and download the model if needed
+check_and_download_model("deepseek-llm:latest")
+
 # Initialize the language model using Ollama
-# deepseek-r1 is the specific model being used for generating responses
+# deepseek-llm is the specific model being used for generating responses
 llm = OllamaLLM(
-    model="deepseek-r1:latest"  # Using the latest version of the deepseek-r1 model
+    model="deepseek-llm:latest"  # Using the latest version of the deepseek-llm model
 )
 
 

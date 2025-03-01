@@ -1,0 +1,15 @@
+Token mapping analysis for: 'Hello, world!'
+--------------------------------------------------
+Step 1: Text to Tokens
+Original text: Hello, world!
+Token IDs: [9906, 11, 1917, 0]
+
+Step 2: Individual Token Analysis
+Position 1: Token ID  9906 → 'Hello'
+Position 2: Token ID    11 → ','
+Position 3: Token ID  1917 → ' world'
+Position 4: Token ID     0 → '!'
+
+Step 3: Reconstruction
+Reconstructed text: Hello, world!
+Matches original: True

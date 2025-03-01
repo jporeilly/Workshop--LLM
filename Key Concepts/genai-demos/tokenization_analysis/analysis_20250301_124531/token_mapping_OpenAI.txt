@@ -1,0 +1,13 @@
+Token mapping analysis for: 'OpenAI'
+--------------------------------------------------
+Step 1: Text to Tokens
+Original text: OpenAI
+Token IDs: [5109, 15836]
+
+Step 2: Individual Token Analysis
+Position 1: Token ID  5109 → 'Open'
+Position 2: Token ID 15836 → 'AI'
+
+Step 3: Reconstruction
+Reconstructed text: OpenAI
+Matches original: True
