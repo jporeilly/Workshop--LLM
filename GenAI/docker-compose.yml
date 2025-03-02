@@ -3,6 +3,7 @@ volumes:
   postgres_storage:
   ollama_storage:
   qdrant_storage:
+  openwebui_storage:
 
 networks:
   demo:
@@ -103,6 +104,26 @@ services:
       - 6333:6333
     volumes:
       - qdrant_storage:/qdrant/storage
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: openwebui
+    hostname: openwebui
+    networks: ['demo']
+    restart: unless-stopped
+    ports:
+      - 3000:8080
+    environment:
+      - OLLAMA_API_BASE_URL=http://ollama:11434/api
+      - OLLAMA_HOST=ollama
+      - OLLAMA_SCHEME=http
+      - OLLAMA_PORT=11434
+    volumes:
+      - openwebui_storage:/app/backend/data
+    depends_on:
+      - ollama-cpu
+      - ollama-gpu
+      - ollama-gpu-amd
 
   ollama-cpu:
     profiles: ["cpu"]
