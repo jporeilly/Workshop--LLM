@@ -1,10 +1,12 @@
-## AI starter kit (by the n8n team)
+# Self-hosted AI starter kit (by the n8n team)
 
-**AI Starter Kit** is an open, docker compose template that
+**Self-hosted AI Starter Kit** is an open, docker compose template that
 quickly bootstraps a fully featured Local AI and Low Code development
 environment including Open WebUI for an interface to chat with your N8N agents. 
 
-This is version with a couple of improvements and the addition of Open WebUI and Flowise! 
+This is Cole's version with a couple of improvements and the addition of Open WebUI and Flowise! 
+Also, the local RAG AI Agent workflow from the video will be automatically in your 
+n8n instance if you use this setup instead of the base one provided by n8n!
 
 [Original Local AI Starter Kit](https://github.com/n8n-io/self-hosted-ai-starter-kit)
 

@@ -1,6 +1,6 @@
-# Aisuite 
+## AI Suite 
 
-## Setup
+### Setup
 1. Check python version, for me it is `Python 3.11.0` by running `python3 --version`. I assume you have python installed, if not please it first.
 2. Create virtual environment and activate it `python3 -m venv .venv && source .venv/bin/activate`
 3. Install sll the provider-specific libraries `pip install 'aisuite[all]'`
