@@ -1,0 +1,107 @@
+Transformer Analysis Results
+=========================
+Model: Ollama - llama3.2:latest
+Date: 2025-03-04 12:35:52
+
+
+Configuration
+=============
+
+        Input Prompt: 'What is the capital of France?'
+        Tokens: ['What', 'is', 'the', 'capital', 'of', 'France', '?']
+        Expected Response: 'Paris'
+        
+
+Token Embeddings
+================
+Generated embeddings for tokens:
+What: Shape (3072,), Mean 0.0035
+is: Shape (3072,), Mean 0.0415
+the: Shape (3072,), Mean 0.0031
+capital: Shape (3072,), Mean 0.0390
+of: Shape (3072,), Mean 0.0080
+France: Shape (3072,), Mean 0.0062
+?: Shape (3072,), Mean 0.0207
+
+
+Token Attention
+===============
+Attention Matrix:
+What -> What: 0.2680
+What -> is: 0.1331
+What -> the: 0.1583
+What -> capital: 0.0830
+What -> of: 0.1728
+What -> France: 0.1264
+What -> ?: 0.0584
+is -> What: 0.1186
+is -> is: 0.2388
+is -> the: 0.1759
+is -> capital: 0.1166
+is -> of: 0.1797
+is -> France: 0.1005
+is -> ?: 0.0699
+the -> What: 0.1366
+the -> is: 0.1702
+the -> the: 0.2311
+the -> capital: 0.1065
+the -> of: 0.1888
+the -> France: 0.1081
+the -> ?: 0.0587
+capital -> What: 0.0965
+capital -> is: 0.1522
+capital -> the: 0.1435
+capital -> capital: 0.3115
+capital -> of: 0.1343
+capital -> France: 0.1009
+capital -> ?: 0.0611
+of -> What: 0.1442
+of -> is: 0.1684
+of -> the: 0.1827
+of -> capital: 0.0964
+of -> of: 0.2237
+of -> France: 0.1074
+of -> ?: 0.0772
+France -> What: 0.1383
+France -> is: 0.1234
+France -> the: 0.1371
+France -> capital: 0.0950
+France -> of: 0.1408
+France -> France: 0.2932
+France -> ?: 0.0723
+? -> What: 0.0853
+? -> is: 0.1148
+? -> the: 0.0994
+? -> capital: 0.0768
+? -> of: 0.1352
+? -> France: 0.0966
+? -> ?: 0.3918
+
+
+Processing Stages
+=================
+Transformer Processing Stages:
+1. Input Embedding
+2. Positional Encoding
+3. Self-Attention
+4. Feed Forward
+5. Layer Normalization
+6. Final Representation
+
+
+Response Generation
+===================
+
+        Prompt: 'What is the capital of France?'
+        - Embedding shape: (3072,)
+        - Embedding mean: 0.0154
+        - Embedding std: 1.5322
+        
+        Response: 'Paris'
+        - Embedding shape: (3072,)
+        - Embedding mean: 0.0087
+        - Embedding std: 1.5020
+        
+        Cosine Similarity between prompt and response: 
+        0.3781
+        
