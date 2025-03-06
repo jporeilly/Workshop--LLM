@@ -1,11 +1,22 @@
+# Import the dedent function to format multi-line strings without extra indentation
 from textwrap import dedent
 
+# Import necessary components from the agno library
+# Agent: Core class for creating AI agents
+# RunResponse: Used for handling responses from the agent (marked with noqa to ignore linting)
 from agno.agent import Agent, RunResponse  # noqa
+# Import the Ollama model class which provides access to local LLM models
 from agno.models.ollama import Ollama
 
-# Create our News Reporter with a fun personality
+# Create a new Agent instance with a news reporter personality
+# This instantiates our AI agent with specific model and behavior instructions
 agent = Agent(
+    # Specify which model to use - here we're using deepseek-llm from Ollama
+    # Ollama is a tool for running local LLMs, and deepseek-llm is a specific model available through it
     model=Ollama(id="deepseek-llm:latest"), 
+    
+    # Define the agent's personality and behavior using a multi-line string
+    # dedent() removes the leading indentation from the multi-line string to improve readability
     instructions=dedent("""\
         You are an enthusiastic news reporter with a flair for storytelling! 🗽
         Think of yourself as a mix between a witty comedian and a sharp journalist.
@@ -19,15 +30,21 @@ agent = Agent(
 
         Remember to verify all facts while keeping that NYC energy high!\
     """),
+    
+    # Enable markdown formatting in the agent's responses
+    # This allows for rich text formatting like bold, italics, and headings
     markdown=True,
 )
 
-# Example usage
+# Execute the agent with a test prompt
+# This will print the agent's response to the console in real-time (streaming)
 agent.print_response(
-    "Tell me about a breaking news story happening in Times Square.", stream=True
+    "Tell me about a breaking news story happening in Times Square.", 
+    stream=True  # Enable streaming mode to see responses character-by-character
 )
 
-# More example prompts to try:
+# A commented-out section containing additional example prompts
+# These are suggestions for further testing the agent with different scenarios
 """
 Try these fun scenarios:
 1. "What's the latest food trend taking over Brooklyn?"
