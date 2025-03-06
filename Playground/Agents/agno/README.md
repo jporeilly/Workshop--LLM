@@ -4,7 +4,7 @@
 1. Clone the repo and navigate to the folder:
     ```
     git clone https://github.com/jporeilly/Workshop--LLM.git
-    cd  Workshop--LLM/Playground/agno
+    cd  Workshop--LLM/Playground/Agents/agno
     ls
     ```
 
@@ -15,6 +15,6 @@
 
 4. Install the required packages - creates virtual env:
     ```
-    cd  Workshop--LLM/Playground/agno
+    cd  Workshop--LLM/Playground/Agents/agno
     uv sync
     ```
