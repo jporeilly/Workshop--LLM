@@ -1,15 +1,19 @@
-from textwrap import dedent
+from textwrap import dedent  # For clean multi-line string formatting
 
-from agno.agent import Agent
-from agno.embedder.ollama import OllamaEmbedder
-from agno.knowledge.pdf_url import PDFUrlKnowledgeBase
-from agno.models.ollama import Ollama
-from agno.tools.duckduckgo import DuckDuckGoTools
-from agno.vectordb.lancedb import LanceDb, SearchType
+# Import required components from the agno framework
+from agno.agent import Agent  # Core Agent class that orchestrates the entire process
+from agno.embedder.ollama import OllamaEmbedder  # Embeds text using Ollama models
+from agno.knowledge.pdf_url import PDFUrlKnowledgeBase  # Loads knowledge from PDF URLs
+from agno.models.ollama import Ollama  # Interface to Ollama's local LLM models
+from agno.tools.duckduckgo import DuckDuckGoTools  # Enables web searches via DuckDuckGo
+from agno.vectordb.lancedb import LanceDb, SearchType  # Vector database for storing embeddings
 
-# Create a Recipe Expert Agent with knowledge of Thai recipes
+# Create a specialized Thai Recipe Expert Agent
 agent = Agent(
-    model=OpenAIChat(id="llama3.2:latest"),
+    # Configure the language model - using local Llama 3.2 via Ollama
+    model=Ollama(id="llama3.2:latest"),  # Local LLM without API calls to OpenAI
+    
+    # Detailed instructions that define the agent's personality and behavior
     instructions=dedent("""\
         You are a passionate and knowledgeable Thai cuisine expert! 🧑‍🍳
         Think of yourself as a combination of a warm, encouraging cooking instructor,
@@ -54,27 +58,47 @@ agent = Agent(
         - Clearly indicate when information comes from web sources
         - Be encouraging and supportive of home cooks at all skill levels\
     """),
+    
+    # Configure the knowledge base with Thai recipe information
     knowledge=PDFUrlKnowledgeBase(
+        # Source PDF containing Thai recipes stored in S3
         urls=["https://agno-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf"],
+        
+        # Vector database configuration for efficient semantic search
         vector_db=LanceDb(
-            uri="tmp/lancedb",
-            table_name="recipe_knowledge",
-            search_type=SearchType.hybrid,
-            embedder=OllamaEmbedder(id="llama3.2", dimensions=3072),
+            uri="tmp/lancedb",  # Local storage location for the vector database
+            table_name="recipe_knowledge",  # Name of the table within LanceDB
+            search_type=SearchType.hybrid,  # Uses both keyword and semantic search for better results
+            # Configure the embedder to convert text to vectors using Ollama
+            embedder=OllamaEmbedder(
+                id="llama3.2",  # Using Llama 3.2 model for creating embeddings
+                dimensions=3072,  # Specifies the embedding vector size for Llama 3.2
+            ),
         ),
     ),
-    tools=[DuckDuckGoTools()],
-    show_tool_calls=True,
-    markdown=True,
-    add_references=True,
+    
+    # Add web search capability using DuckDuckGo
+    tools=[DuckDuckGoTools()],  # Allows the agent to search the web for supplementary information
+    
+    # Additional configuration options
+    show_tool_calls=True,  # Shows when external tools like web search are being used
+    markdown=True,  # Formats responses using markdown for better readability
+    add_references=True,  # Includes references to sources of information in responses
 )
 
-# Comment out after the knowledge base is loaded
+# Ensure the knowledge base is loaded before making queries
+# This step may be time-consuming on first run as it downloads and processes the PDF
 if agent.knowledge is not None:
-    agent.knowledge.load()
+    agent.knowledge.load()  # Loads the PDF, extracts text, creates embeddings, and stores in the vector DB
 
+# Example queries with streaming responses (prints tokens as they're generated)
+# Query 1: Request for a specific Thai soup recipe
 agent.print_response(
     "How do I make chicken and galangal in coconut milk soup", stream=True
 )
+
+# Query 2: Request for historical information about Thai curry
 agent.print_response("What is the history of Thai curry?", stream=True)
+
+# Query 3: Request for ingredients list for a popular Thai dish
 agent.print_response("What ingredients do I need for Pad Thai?", stream=True)
