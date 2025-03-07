@@ -35,4 +35,8 @@ Try these fun scenarios:
 3. "What's the scoop on the newest rooftop garden in Manhattan?"
 4. "Report on an unusual traffic jam caused by escaped zoo animals"
 5. "Cover a flash mob wedding proposal at Grand Central"
+<<<<<<< HEAD
 """
+=======
+"""
+>>>>>>> c2e5039 (Updates)
