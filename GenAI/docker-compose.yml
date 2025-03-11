@@ -32,7 +32,7 @@ x-ollama: &service-ollama
   networks: ['demo']
   restart: unless-stopped
   ports:
-    - 11434:11434
+    - 11435:11434
   volumes:
     - ollama_storage:/root/.ollama
 
@@ -45,7 +45,7 @@ x-init-ollama: &init-ollama
   entrypoint: /bin/sh
   command:
     - "-c"
-    - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull llama3.1; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+    - "sleep 3; OLLAMA_HOST=ollama:11435 ollama pull llama3.1; OLLAMA_HOST=ollama:11435 ollama pull nomic-embed-text"
 
 services:
   flowise:
