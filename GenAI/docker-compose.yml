@@ -46,7 +46,6 @@ x-n8n: &service-n8n
 # Common configuration for Ollama service (using YAML anchor)
 x-ollama: &service-ollama
   image: ollama/ollama:latest
-  container_name: ollama
   networks: ['demo']
   restart: unless-stopped
   ports:
@@ -58,14 +57,14 @@ x-ollama: &service-ollama
 x-init-ollama: &init-ollama
   image: ollama/ollama:latest
   networks: ['demo']
-  container_name: ollama-pull-llama
+  entrypoint: /bin/sh
   volumes:
     - ollama_storage:/root/.ollama  # Share the same volume as the Ollama service
-  entrypoint: /bin/sh
   command:
     - "-c"
     # Waits for Ollama to start, then pulls the specified models
-    - "sleep 3; OLLAMA_HOST=ollama:11435 ollama pull llama3.1; OLLAMA_HOST=ollama:11435 ollama pull nomic-embed-text"
+    # Using internal container port 11434 for communication within the Docker network
+    - "sleep 10; OLLAMA_HOST=ollama:11434 ollama pull llama3.1; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
 
 # Define all services
 services:
@@ -165,11 +164,13 @@ services:
   ollama-cpu:
     profiles: ["cpu"]  # Only start with "cpu" profile
     <<: *service-ollama  # Inherit configuration from service-ollama anchor
+    container_name: ollama  # Using a single name for service discovery
 
   # Ollama for GPU (NVIDIA) - activated with "gpu-nvidia" profile
   ollama-gpu:
     profiles: ["gpu-nvidia"]  # Only start with "gpu-nvidia" profile
     <<: *service-ollama  # Inherit configuration from service-ollama anchor
+    container_name: ollama  # Using a single name for service discovery
     deploy:
       resources:
         reservations:
@@ -182,6 +183,7 @@ services:
   ollama-pull-llama-cpu:
     profiles: ["cpu"]  # Only start with "cpu" profile
     <<: *init-ollama  # Inherit configuration from init-ollama anchor
+    container_name: ollama-pull-llama-cpu
     depends_on:
       - ollama-cpu  # Wait for Ollama CPU service to start
 
@@ -189,5 +191,6 @@ services:
   ollama-pull-llama-gpu:
     profiles: ["gpu-nvidia"]  # Only start with "gpu-nvidia" profile
     <<: *init-ollama  # Inherit configuration from init-ollama anchor
+    container_name: ollama-pull-llama-gpu
     depends_on:
       - ollama-gpu  # Wait for Ollama GPU service to start
