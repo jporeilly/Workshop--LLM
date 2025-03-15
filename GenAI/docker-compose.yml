@@ -1,6 +1,6 @@
 # Docker Compose configuration for an AI development stack
 # This setup includes n8n (workflow automation), Postgres, Ollama (LLM serving), 
-# Qdrant (vector database), Open-WebUI, Flowise, and SQLite
+# Qdrant (vector database), Open-WebUI, and Flowise
 
 # Define volumes for persistent storage
 volumes:
@@ -16,8 +16,6 @@ volumes:
   open-webui:
   # Storage for Flowise configuration and data
   flowise:
-  # Storage for SQLite database files (for Flowise record management)
-  sqlite_storage:
 
 # Define networks for container communication
 networks:
@@ -77,18 +75,23 @@ services:
     restart: unless-stopped
     container_name: flowise
     environment:
-        - PORT=3001
-        - DATABASE_PATH=/root/.flowise/database.sqlite
-        - DATABASE_TYPE=sqlite
+      - PORT=3001
+      # Using internal SQLite database in the default location
+      - DATABASE_TYPE=sqlite
+      - DATABASE_PATH=/root/.flowise/database.sqlite
+      # Increase memory limit if needed
+      - NODE_OPTIONS=--max-old-space-size=4096
     ports:
-        - 3001:3001  # Expose Flowise UI on port 3001
+      - 3001:3001  # Expose Flowise UI on port 3001
     extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allow access to host machine services    
+      - "host.docker.internal:host-gateway"  # Allow access to host machine services
     volumes:
-        - ~/.flowise:/root/.flowise  # Store Flowise data in user's home directory
+      - flowise:/root/.flowise  # Store Flowise data in a Docker volume for better persistence
     entrypoint: /bin/sh -c "sleep 3; flowise start"  # Wait before starting to ensure dependencies are ready
-    depends_on:
-      - sqlite-flowise
+    deploy:
+      resources:
+        limits:
+          memory: 4G  # Set memory limit for stability
 
   # Open-WebUI - a web interface for Ollama models
   open-webui:
@@ -102,20 +105,6 @@ services:
       - "host.docker.internal:host-gateway"  # Allow access to host machine services
     volumes:
       - open-webui:/app/backend/data  # Persist Open-WebUI data
-
-  # SQLite database for Flowise record management
-  sqlite-flowise:
-    image: keinos/sqlite3:latest
-    networks: ['demo']
-    restart: unless-stopped
-    container_name: sqlite-flowise
-    volumes:
-      - sqlite_storage:/data  # Persist SQLite database files
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      # Create the database directory and keep container running
-      - "mkdir -p /data && touch /data/flowise.sqlite && tail -f /dev/null"
 
   # PostgreSQL database - used by n8n for workflow storage
   postgres:
@@ -136,8 +125,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-
 
   # n8n-import - one-time container to import workflows and credentials
   n8n-import:
