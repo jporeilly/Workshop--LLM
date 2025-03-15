@@ -1,6 +1,6 @@
 # Docker Compose configuration for an AI development stack
 # This setup includes n8n (workflow automation), Postgres, Ollama (LLM serving), 
-# Qdrant (vector database), Open-WebUI, Flowise, and SQLite
+# Qdrant (vector database), Open-WebUI, and Flowise
 
 # Define volumes for persistent storage
 volumes:
@@ -16,8 +16,6 @@ volumes:
   open-webui:
   # Storage for Flowise configuration and data
   flowise:
-  # Storage for SQLite database files
-  sqlite_storage:
 
 # Define networks for container communication
 networks:
@@ -119,25 +117,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # SQLite database service
-  sqlite:
-    image: keinos/sqlite3:latest
-    networks: ['demo']
-    restart: unless-stopped
-    container_name: sqlite
-    environment:
-      - SQLITE_USER=sqlite  # Set username
-      - SQLITE_PASSWORD=password  # Set password
-      - SQLITE_DB=document_store  # Set database name
-    volumes:
-      - sqlite_storage:/data  # Persist SQLite database files
-      - ./GenAI/init-sqlite:/docker-entrypoint-initdb.d  # Mount initialization scripts
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      # Create the database and set up the user with permissions
-      - "mkdir -p /data && sqlite3 /data/document_store.db 'PRAGMA user_version = 1;' && echo 'SQLite database initialized with user sqlite and full privileges to document_store' && tail -f /dev/null"
-
   # n8n-import - one-time container to import workflows and credentials
   n8n-import:
     <<: *service-n8n  # Inherit configuration from service-n8n anchor
@@ -148,7 +127,7 @@ services:
       # Import credentials and workflows from backup directory
       - "n8n import:credentials --separate --input=/backup/credentials && n8n import:workflow --separate --input=/backup/workflows"
     volumes:
-      - ./GenAI/n8n/backup:/backup  # Mount local backup directory
+      - ./n8n/backup:/backup  # Mount local backup directory
     depends_on:
       postgres:
         condition: service_healthy  # Wait until PostgreSQL is healthy
@@ -162,8 +141,8 @@ services:
       - 5678:5678  # Expose n8n UI on port 5678
     volumes:
       - n8n_storage:/home/node/.n8n  # Persist n8n data
-      - ./GenAI/n8n/backup:/backup  # Mount local backup directory
-      - ./GenAI/shared:/data/shared  # Mount shared directory for data exchange
+      - ./n8n/backup:/backup  # Mount local backup directory
+      - ./shared:/data/shared  # Mount shared directory for data exchange
     depends_on:
       postgres:
         condition: service_healthy  # Wait until PostgreSQL is healthy
