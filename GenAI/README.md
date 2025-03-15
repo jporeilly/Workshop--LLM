@@ -1,26 +1,26 @@
-## AI Stack Setup Guide
+# AI Stack Setup Guide
 
 This guide provides comprehensive instructions for setting up a complete AI development stack using Docker Compose. The stack includes workflow automation, databases, large language model serving, vector database, and visualization tools.
 
-### Components
+## Components
 
 This AI stack includes the following components:
 
 1. **n8n** - Workflow automation platform
 2. **PostgreSQL** - Relational database for n8n
-3. **SQLite** - Lightweight document store database
+3. **SQLite** - Lightweight database for Flowise record management
 4. **Ollama** - Local LLM serving (CPU and GPU options)
 5. **Qdrant** - Vector database for similarity search
 6. **Open-WebUI** - Web interface for Ollama models
 7. **Flowise** - Low-code AI automation platform
 
-### Prerequisites
+## Prerequisites
 
 - Docker and Docker Compose installed
 - Basic understanding of Docker containers
 - For GPU support: NVIDIA GPU with appropriate drivers and nvidia-docker
 
-### Directory Structure
+## Directory Structure
 
 Create the following directory structure:
 
@@ -28,8 +28,6 @@ Create the following directory structure:
 GenAI/
 ├── docker-compose.yml
 ├── .env
-├── init-sqlite/
-│   └── init-sqlite.sh
 ├── n8n/
 │   └── backup/
 │       ├── credentials/
@@ -45,115 +43,16 @@ GenAI/
 mkdir -p GenAI/n8n/backup/credentials
 mkdir -p GenAI/n8n/backup/workflows
 mkdir -p GenAI/shared
-mkdir -p GenAI/init-sqlite
 ```
 
-### 2. Create SQLite Initialization Script
-
-Create a file named `init-sqlite.sh` in the `GenAI/init-sqlite` directory with the following content:
-
-```bash
-#!/bin/sh
-# SQLite initialization script
-# This script creates the document_store database and sets up permissions
-
-set -e
-
-# Create data directory if it doesn't exist
-mkdir -p /data
-
-# Create the document_store database
-sqlite3 /data/document_store.db <<EOF
--- Initialize the database
-PRAGMA journal_mode = WAL;
-PRAGMA synchronous = NORMAL;
-PRAGMA foreign_keys = ON;
-PRAGMA encoding = 'UTF-8';
-
--- Create a table to store document metadata
-CREATE TABLE IF NOT EXISTS documents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    content_type TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    filename TEXT,
-    file_size INTEGER,
-    metadata TEXT
-);
-
--- Create a table to store document content
-CREATE TABLE IF NOT EXISTS document_contents (
-    document_id INTEGER PRIMARY KEY,
-    content BLOB,
-    embedding TEXT,
-    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
-);
-
--- Create a table for document tags
-CREATE TABLE IF NOT EXISTS tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL
-);
-
--- Create a many-to-many relationship table for documents and tags
-CREATE TABLE IF NOT EXISTS document_tags (
-    document_id INTEGER,
-    tag_id INTEGER,
-    PRIMARY KEY (document_id, tag_id),
-    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-);
-
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_documents_title ON documents(title);
-CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
-
--- Create a trigger to update the updated_at timestamp when a document is modified
-CREATE TRIGGER IF NOT EXISTS update_documents_timestamp 
-AFTER UPDATE ON documents
-BEGIN
-    UPDATE documents SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;
-
--- Output success message
-SELECT 'SQLite database initialized successfully' as message;
-EOF
-
-# Set permissions for the database file
-chmod 644 /data/document_store.db
-
-# Create a configuration file with user authentication info
-cat > /data/auth.json <<EOF
-{
-  "username": "sqlite",
-  "password": "password",
-  "database": "document_store",
-  "privileges": "all"
-}
-EOF
-
-# Secure the auth file
-chmod 600 /data/auth.json
-
-echo "SQLite database 'document_store' initialized with user 'sqlite' and full privileges"
-echo "Database ready at /data/document_store.db"
-```
-
-Make the script executable:
-
-```bash
-chmod +x GenAI/init-sqlite/init-sqlite.sh
-```
-
-### 3. Create Docker Compose File
+### 2. Create Docker Compose File
 
 Create a file named `docker-compose.yml` in the `GenAI` directory with the following content:
 
 ```yaml
 # Docker Compose configuration for an AI development stack
 # This setup includes n8n (workflow automation), Postgres, Ollama (LLM serving), 
-# Qdrant (vector database), Open-WebUI, Flowise, and SQLite
+# Qdrant (vector database), Open-WebUI, and Flowise
 
 # Define volumes for persistent storage
 volumes:
@@ -169,8 +68,6 @@ volumes:
   open-webui:
   # Storage for Flowise configuration and data
   flowise:
-  # Storage for SQLite database files
-  sqlite_storage:
 
 # Define networks for container communication
 networks:
@@ -272,25 +169,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # SQLite database service
-  sqlite:
-    image: keinos/sqlite3:latest
-    networks: ['demo']
-    restart: unless-stopped
-    container_name: sqlite
-    environment:
-      - SQLITE_USER=sqlite  # Set username
-      - SQLITE_PASSWORD=password  # Set password
-      - SQLITE_DB=document_store  # Set database name
-    volumes:
-      - sqlite_storage:/data  # Persist SQLite database files
-      - ./GenAI/init-sqlite:/docker-entrypoint-initdb.d  # Mount initialization scripts
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      # Create the database and set up the user with permissions
-      - "mkdir -p /data && sqlite3 /data/document_store.db 'PRAGMA user_version = 1;' && echo 'SQLite database initialized with user sqlite and full privileges to document_store' && tail -f /dev/null"
-
   # n8n-import - one-time container to import workflows and credentials
   n8n-import:
     <<: *service-n8n  # Inherit configuration from service-n8n anchor
@@ -370,7 +248,7 @@ services:
       - ollama-gpu  # Wait for Ollama GPU service to start
 ```
 
-### 4. Create Environment File
+### 3. Create Environment File
 
 Create a file named `.env` in the `GenAI` directory with the following content:
 
@@ -414,55 +292,7 @@ Once the stack is running, you can access the various services at these URLs:
 - **Qdrant API**: http://localhost:6333
 - **Ollama API**: http://localhost:11435
 - **PostgreSQL**: localhost:5432
-- **SQLite**: Connect through sqlite container
-
-## Interacting with SQLite
-
-To interact with the SQLite database:
-
-```bash
-# Connect to the SQLite container
-docker exec -it sqlite /bin/sh
-
-# Access the SQLite database
-sqlite3 /data/document_store.db
-
-# Run SQLite commands
-.tables
-SELECT * FROM documents;
-```
-
-SQLite database credentials:
-- **Database name**: document_store
-- **Username**: sqlite
-- **Password**: password
-
-## Database Schema
-
-The SQLite database includes the following tables:
-
-1. **documents**: Stores document metadata
-   - id (PRIMARY KEY)
-   - title
-   - content_type
-   - created_at
-   - updated_at
-   - filename
-   - file_size
-   - metadata
-
-2. **document_contents**: Stores document content and embeddings
-   - document_id (PRIMARY KEY, references documents.id)
-   - content (BLOB)
-   - embedding (TEXT)
-
-3. **tags**: Stores tag metadata
-   - id (PRIMARY KEY)
-   - name (UNIQUE)
-
-4. **document_tags**: Many-to-many relationship between documents and tags
-   - document_id (references documents.id)
-   - tag_id (references tags.id)
+- **SQLite**: Data persisted in sqlite_storage volume for Flowise
 
 ## Building AI Workflows
 
@@ -473,7 +303,7 @@ The stack is designed for building AI-powered workflows:
    - Trigger n8n workflow on new document
    - Extract text using n8n
    - Generate embeddings using Ollama's nomic-embed-text model
-   - Store document and embeddings in SQLite
+   - Store document and embeddings in PostgreSQL or Qdrant
    - Index vectors in Qdrant for similarity search
    - Build a search interface in Flowise
 
@@ -498,7 +328,7 @@ The stack is designed for building AI-powered workflows:
 
 3. **Database connection issues**:
    - Verify credentials in .env file
-   - Check database logs: `docker logs postgres` or `docker logs sqlite`
+   - Check database logs: `docker logs postgres`
 
 4. **GPU not detected**:
    - Run `nvidia-smi` to verify GPU is accessible
@@ -514,8 +344,8 @@ To backup your data:
 # Backup PostgreSQL
 docker exec -t postgres pg_dump -U ${POSTGRES_USER} ${POSTGRES_DB} > pg_backup.sql
 
-# Backup SQLite
-docker exec -t sqlite sqlite3 /data/document_store.db .dump > sqlite_backup.sql
+# Backup SQLite for Flowise
+docker cp sqlite-flowise:/data/flowise.sqlite ./flowise_backup.sqlite
 ```
 
 ### Upgrading Components
@@ -576,4 +406,3 @@ For larger vector databases, you can adjust Qdrant's configuration:
 - [Ollama Documentation](https://ollama.ai/documentation)
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
 - [Flowise Documentation](https://docs.flowiseai.com/)
-- [SQLite Documentation](https://sqlite.org/docs.html)

@@ -16,7 +16,7 @@ volumes:
   open-webui:
   # Storage for Flowise configuration and data
   flowise:
-  # Storage for SQLite database files
+  # Storage for SQLite database files (for Flowise record management)
   sqlite_storage:
 
 # Define networks for container communication
@@ -78,6 +78,8 @@ services:
     container_name: flowise
     environment:
         - PORT=3001
+        - DATABASE_PATH=/root/.flowise/database.sqlite
+        - DATABASE_TYPE=sqlite
     ports:
         - 3001:3001  # Expose Flowise UI on port 3001
     extra_hosts:
@@ -85,6 +87,8 @@ services:
     volumes:
         - ~/.flowise:/root/.flowise  # Store Flowise data in user's home directory
     entrypoint: /bin/sh -c "sleep 3; flowise start"  # Wait before starting to ensure dependencies are ready
+    depends_on:
+      - sqlite-flowise
 
   # Open-WebUI - a web interface for Ollama models
   open-webui:
@@ -98,6 +102,20 @@ services:
       - "host.docker.internal:host-gateway"  # Allow access to host machine services
     volumes:
       - open-webui:/app/backend/data  # Persist Open-WebUI data
+
+  # SQLite database for Flowise record management
+  sqlite-flowise:
+    image: keinos/sqlite3:latest
+    networks: ['demo']
+    restart: unless-stopped
+    container_name: sqlite-flowise
+    volumes:
+      - sqlite_storage:/data  # Persist SQLite database files
+    entrypoint: /bin/sh
+    command:
+      - "-c"
+      # Create the database directory and keep container running
+      - "mkdir -p /data && touch /data/flowise.sqlite && tail -f /dev/null"
 
   # PostgreSQL database - used by n8n for workflow storage
   postgres:
@@ -119,24 +137,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # SQLite database service
-  sqlite:
-    image: keinos/sqlite3:latest
-    networks: ['demo']
-    restart: unless-stopped
-    container_name: sqlite
-    environment:
-      - SQLITE_USER=sqlite  # Set username
-      - SQLITE_PASSWORD=password  # Set password
-      - SQLITE_DB=document_store  # Set database name
-    volumes:
-      - sqlite_storage:/data  # Persist SQLite database files
-      - ./GenAI/init-sqlite:/docker-entrypoint-initdb.d  # Mount initialization scripts
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      # Create the database and set up the user with permissions
-      - "mkdir -p /data && sqlite3 /data/document_store.db 'PRAGMA user_version = 1;' && echo 'SQLite database initialized with user sqlite and full privileges to document_store' && tail -f /dev/null"
+
 
   # n8n-import - one-time container to import workflows and credentials
   n8n-import:
