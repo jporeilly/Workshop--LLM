@@ -72,19 +72,18 @@ services:
           memory: 4G  # Set memory limit for stability
 
   # Open-WebUI - a web interface for Ollama models
+  # UPDATED: Now using host network mode to fix connection issues
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-    networks: ['demo']
+    network_mode: "host"  # Changed to host networking to fix connection issues
     restart: unless-stopped
     container_name: open-webui
-    ports:
-      - "3000:8080"  # Map container port 8080 to host port 3000
     environment:
-      - OLLAMA_API_BASE_URL=http://host.docker.internal:11434/api  # Connect to Ollama on host
-    extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allow access to host machine services
+      - OLLAMA_API_BASE_URL=http://localhost:11434/api  # Updated to use localhost instead of host.docker.internal
     volumes:
       - open-webui:/app/backend/data  # Persist Open-WebUI data
+    # Note: ports mapping removed as it's not needed with host network mode
+    # Note: extra_hosts removed as it's not needed with host network mode
 
   # PostgreSQL database - used by n8n for workflow storage
   postgres:
@@ -148,12 +147,6 @@ services:
       - 6333:6333  # Expose Qdrant API on default port
     volumes:
       - qdrant_storage:/qdrant/storage  # Persist vector database files
-
-# Note: The following services have been removed as Ollama will run on the host:
-# - ollama-cpu
-# - ollama-gpu
-# - ollama-pull-llama-cpu
-# - ollama-pull-llama-gpu
 
 # You will need to manually run these commands on your host:
 # - ollama pull llama3.1
