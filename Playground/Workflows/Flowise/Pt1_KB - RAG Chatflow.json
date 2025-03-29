@@ -3,8 +3,8 @@
     {
       "id": "toolAgent_0",
       "position": {
-        "x": 841.7960608434867,
-        "y": 302.1100995102826
+        "x": 827.484067607929,
+        "y": 280.642109656946
       },
       "type": "customNode",
       "data": {
@@ -86,9 +86,9 @@
             "{{serpAPI_0.data.instance}}"
           ],
           "memory": "{{bufferWindowMemory_0.data.instance}}",
-          "model": "{{chatAnthropic_0.data.instance}}",
+          "model": "{{chatOllama_0.data.instance}}",
           "chatPromptTemplate": "{{chatPromptTemplate_0.data.instance}}",
-          "systemMessage": "\n",
+          "systemMessage": "Identify the most recent question from the user\n",
           "inputModeration": "",
           "maxIterations": ""
         },
@@ -108,16 +108,16 @@
       "height": 486,
       "selected": false,
       "positionAbsolute": {
-        "x": 841.7960608434867,
-        "y": 302.1100995102826
+        "x": 827.484067607929,
+        "y": 280.642109656946
       },
       "dragging": false
     },
     {
       "id": "bufferWindowMemory_0",
       "position": {
-        "x": 350.357962479824,
-        "y": -258.4307861495241
+        "x": 343.4244786932686,
+        "y": -265.28415022993295
       },
       "type": "customNode",
       "data": {
@@ -163,7 +163,7 @@
         ],
         "inputAnchors": [],
         "inputs": {
-          "k": "1500",
+          "k": "1",
           "sessionId": "",
           "memoryKey": "chat_history"
         },
@@ -183,15 +183,15 @@
       "height": 331,
       "selected": false,
       "positionAbsolute": {
-        "x": 350.357962479824,
-        "y": -258.4307861495241
+        "x": 343.4244786932686,
+        "y": -265.28415022993295
       },
       "dragging": false
     },
     {
       "id": "qdrant_0",
       "position": {
-        "x": 347.9317846807197,
+        "x": 346.1586494993596,
         "y": -1007.970629792177
       },
       "type": "customNode",
@@ -367,7 +367,7 @@
           "embeddings": "{{ollamaEmbedding_0.data.instance}}",
           "recordManager": "",
           "qdrantServerUrl": "http://qdrant:6333",
-          "qdrantCollection": "pentaho",
+          "qdrantCollection": "Pentaho Data Integration",
           "fileUpload": "",
           "qdrantVectorDimension": "768",
           "contentPayloadKey": "content",
@@ -412,7 +412,7 @@
       "height": 704,
       "selected": false,
       "positionAbsolute": {
-        "x": 347.9317846807197,
+        "x": 346.1586494993596,
         "y": -1007.970629792177
       },
       "dragging": false
@@ -486,7 +486,7 @@
           }
         ],
         "inputs": {
-          "name": "Pentaho",
+          "name": "Pentaho Data Integration",
           "description": "Searches PDFs to retrieve knowledge on Pentaho Data Integration.",
           "retriever": "{{qdrant_0.data.instance}}",
           "returnSourceDocuments": true,
@@ -610,7 +610,7 @@
       "id": "pdfFile_0",
       "position": {
         "x": -218.60905877787528,
-        "y": -578.9762072484189
+        "y": -580.2075511243634
       },
       "type": "customNode",
       "data": {
@@ -729,15 +729,15 @@
       "selected": false,
       "positionAbsolute": {
         "x": -218.60905877787528,
-        "y": -578.9762072484189
+        "y": -580.2075511243634
       },
       "dragging": false
     },
     {
       "id": "chatPromptTemplate_0",
       "position": {
-        "x": 1217.2386552292426,
-        "y": 112.80978466550368
+        "x": 1211.4867657645746,
+        "y": 23.903349983145688
       },
       "type": "customNode",
       "data": {
@@ -805,8 +805,8 @@
         ],
         "inputAnchors": [],
         "inputs": {
-          "systemMessagePrompt": "Role\nYou are James, a Pentaho customer support specialist with expertise in data integration, analytics, and business intelligence solutions.\n\nIdentity\nName: James\nRole: Technical Support Agent for Pentaho\nExpertise: All Pentaho products (PDI/Kettle, Pentaho Server, Analyzer, Report Designer)\n\nBehavior\nProfessional and patient while maintaining technical accuracy\nBalance technical language with clear explanations based on user's expertise level\nAlways identify as \"James from Pentaho Support\" in first responses\nYou have access to the \"Pentaho\" retriever tool which you should first use to resolve the customer issue\nPrioritize actionable solutions over general advice\n\nResponse Process\n1.Acknowledge the customer's issue\n2.Ask for missing technical details (version, environment, error logs) if needed\n3. First access the \"Pentaho\" tool to respond. \n4.If the answer cant be found search the internet using \"Serp API\" tool\n5.Provide step-by-step troubleshooting or solutions\n6. Include relevant documentation links\n7. Confirm next steps or resolution status\n\nKnowledge Boundaries\nAnswer questions on Pentaho Data Integration\nSpecialized in Pentaho product suite and common integration scenarios\nFamiliar with database connections, cloud platforms, and third-party tools used with Pentaho\nRedirect licensing questions to sales channels\nCollect details for potential bug reports or feature requests\n\nInteraction Style\nBegin responses with \"James from Pentaho Support here.\"\nUse technical terminology appropriate to customer's expertise level\nProvide code examples when relevant\nFormat complex instructions as numbered steps\nAsk clarifying questions before suggesting solutions\n\nSupport Limitatiions\nYou have access to the \"Pentaho\" retriever tool which you should first use to resolve the customer issue\n\nEscalate when issues exceed standard support boundaries\nDirect training needs to Pentaho Academy resources\nAcknowledge when a solution requires deeper investigation\n\nYour primary goal is to help customers resolve technical issues efficiently while building confidence in both Pentaho products and the support experience.\n",
-          "humanMessagePrompt": "hello",
+          "systemMessagePrompt": "## Role & Identity\nYou are James, a Pentaho Knowledge Specialist with comprehensive expertise in Pentaho Data Integration (PDI).\n- **Name**: James\n- **Role**: Knowledge Base Provider for Pentaho Data Integration\n- **Focus**: Direct, specific answers to PDI questions\n\n## Question-Focused Approach\n- Begin ALL responses with: \"James from Pentaho Knowledge Base here.\"\n- READ the question carefully and identify the EXACT concept being asked about\n- Answer ONLY what was specifically asked - do not provide general PDI information unless directly relevant\n- Stay focused on the precise question without adding tangential information\n\n## Research Process\nFirst, thoroughly search the uploaded PDF document for any information related to my question.\nIf you find relevant information in the PDF, use it to answer my question completely.\nIf you cannot find the key terms or relevant information in the PDF, only then conduct an internet search to find the answer.\nWhen providing your answer, clearly indicate whether your information comes from the PDF or from an internet search.\n\n## Response Structure\n1. Identify the most recent question from the user\n2. Start with: \"James from Pentaho Knowledge Base here.\"\n3. Directly state what the specific term/concept is within PDI (e.g., \"A Hop in Pentaho Data Integration is...\")\n4. Provide a concise definition or explanation of ONLY the asked concept\n5. If relevant, briefly explain how this specific concept fits within PDI\n6. Include a brief \"References\" section and cite only the sources that directly mention the specific term in the PDF and search results\n7. Suggest some follow up questions to help clarify the question\n\n## Common Pitfalls to Avoid\n- DO NOT provide general PDI information if not directly related to the specific question\n- DO NOT explain ETL processes, jobs, or transformations unless specifically asked about them\n- DO NOT list features or components of PDI unless directly related to the question\n- DO NOT provide design principles or best practices unless specifically asked\n\n## Primary Objective\nYour primary goal is to provide direct, specific answers to PDI questions by focusing exclusively on what was asked. Every response must address the exact term or concept in the question, avoiding general information about PDI unless directly relevant to the specific query.\n",
+          "humanMessagePrompt": "can you please help",
           "promptValues": "",
           "messageHistory": "messageHistoryCode"
         },
@@ -826,165 +826,8 @@
       "height": 742,
       "selected": false,
       "positionAbsolute": {
-        "x": 1217.2386552292426,
-        "y": 112.80978466550368
-      },
-      "dragging": false
-    },
-    {
-      "id": "chatAnthropic_0",
-      "position": {
-        "x": 360.86557324612585,
-        "y": 109.65037216918012
-      },
-      "type": "customNode",
-      "data": {
-        "id": "chatAnthropic_0",
-        "label": "ChatAnthropic",
-        "version": 8,
-        "name": "chatAnthropic",
-        "type": "ChatAnthropic",
-        "baseClasses": [
-          "ChatAnthropic",
-          "ChatAnthropicMessages",
-          "BaseChatModel",
-          "BaseLanguageModel",
-          "Runnable"
-        ],
-        "category": "Chat Models",
-        "description": "Wrapper around ChatAnthropic large language models that use the Chat endpoint",
-        "inputParams": [
-          {
-            "label": "Connect Credential",
-            "name": "credential",
-            "type": "credential",
-            "credentialNames": [
-              "anthropicApi"
-            ],
-            "id": "chatAnthropic_0-input-credential-credential"
-          },
-          {
-            "label": "Model Name",
-            "name": "modelName",
-            "type": "asyncOptions",
-            "loadMethod": "listModels",
-            "default": "claude-3-haiku",
-            "id": "chatAnthropic_0-input-modelName-asyncOptions"
-          },
-          {
-            "label": "Temperature",
-            "name": "temperature",
-            "type": "number",
-            "step": 0.1,
-            "default": 0.9,
-            "optional": true,
-            "id": "chatAnthropic_0-input-temperature-number"
-          },
-          {
-            "label": "Streaming",
-            "name": "streaming",
-            "type": "boolean",
-            "default": true,
-            "optional": true,
-            "additionalParams": true,
-            "id": "chatAnthropic_0-input-streaming-boolean"
-          },
-          {
-            "label": "Max Tokens",
-            "name": "maxTokensToSample",
-            "type": "number",
-            "step": 1,
-            "optional": true,
-            "additionalParams": true,
-            "id": "chatAnthropic_0-input-maxTokensToSample-number"
-          },
-          {
-            "label": "Top P",
-            "name": "topP",
-            "type": "number",
-            "step": 0.1,
-            "optional": true,
-            "additionalParams": true,
-            "id": "chatAnthropic_0-input-topP-number"
-          },
-          {
-            "label": "Top K",
-            "name": "topK",
-            "type": "number",
-            "step": 0.1,
-            "optional": true,
-            "additionalParams": true,
-            "id": "chatAnthropic_0-input-topK-number"
-          },
-          {
-            "label": "Extended Thinking",
-            "name": "extendedThinking",
-            "type": "boolean",
-            "description": "Enable extended thinking for reasoning model such as Claude Sonnet 3.7",
-            "optional": true,
-            "additionalParams": true,
-            "id": "chatAnthropic_0-input-extendedThinking-boolean"
-          },
-          {
-            "label": "Budget Tokens",
-            "name": "budgetTokens",
-            "type": "number",
-            "step": 1,
-            "default": 1024,
-            "description": "Maximum number of tokens Claude is allowed use for its internal reasoning process",
-            "optional": true,
-            "additionalParams": true,
-            "id": "chatAnthropic_0-input-budgetTokens-number"
-          },
-          {
-            "label": "Allow Image Uploads",
-            "name": "allowImageUploads",
-            "type": "boolean",
-            "description": "Allow image input. Refer to the <a href=\"https://docs.flowiseai.com/using-flowise/uploads#image\" target=\"_blank\">docs</a> for more details.",
-            "default": false,
-            "optional": true,
-            "id": "chatAnthropic_0-input-allowImageUploads-boolean"
-          }
-        ],
-        "inputAnchors": [
-          {
-            "label": "Cache",
-            "name": "cache",
-            "type": "BaseCache",
-            "optional": true,
-            "id": "chatAnthropic_0-input-cache-BaseCache"
-          }
-        ],
-        "inputs": {
-          "cache": "",
-          "modelName": "claude-3-7-sonnet-latest",
-          "temperature": "0.2",
-          "streaming": true,
-          "maxTokensToSample": "4096",
-          "topP": "",
-          "topK": "",
-          "extendedThinking": true,
-          "budgetTokens": "2048",
-          "allowImageUploads": ""
-        },
-        "outputAnchors": [
-          {
-            "id": "chatAnthropic_0-output-chatAnthropic-ChatAnthropic|ChatAnthropicMessages|BaseChatModel|BaseLanguageModel|Runnable",
-            "name": "chatAnthropic",
-            "label": "ChatAnthropic",
-            "description": "Wrapper around ChatAnthropic large language models that use the Chat endpoint",
-            "type": "ChatAnthropic | ChatAnthropicMessages | BaseChatModel | BaseLanguageModel | Runnable"
-          }
-        ],
-        "outputs": {},
-        "selected": false
-      },
-      "width": 300,
-      "height": 670,
-      "selected": false,
-      "positionAbsolute": {
-        "x": 360.86557324612585,
-        "y": 109.65037216918012
+        "x": 1211.4867657645746,
+        "y": 23.903349983145688
       },
       "dragging": false
     },
@@ -1046,8 +889,8 @@
     {
       "id": "recursiveCharacterTextSplitter_0",
       "position": {
-        "x": -743.9544101061401,
-        "y": -983.1807165972423
+        "x": -698.1987358481019,
+        "y": -575.3584025582059
       },
       "type": "customNode",
       "data": {
@@ -1097,8 +940,8 @@
         ],
         "inputAnchors": [],
         "inputs": {
-          "chunkSize": 1000,
-          "chunkOverlap": 200,
+          "chunkSize": "500",
+          "chunkOverlap": "20",
           "separators": ""
         },
         "outputAnchors": [
@@ -1117,21 +960,271 @@
       "height": 430,
       "selected": false,
       "positionAbsolute": {
-        "x": -743.9544101061401,
-        "y": -983.1807165972423
+        "x": -698.1987358481019,
+        "y": -575.3584025582059
       },
       "dragging": false
+    },
+    {
+      "id": "chatOllama_0",
+      "position": {
+        "x": 348.4936104522406,
+        "y": 97.22425693774005
+      },
+      "type": "customNode",
+      "data": {
+        "id": "chatOllama_0",
+        "label": "ChatOllama",
+        "version": 5,
+        "name": "chatOllama",
+        "type": "ChatOllama",
+        "baseClasses": [
+          "ChatOllama",
+          "ChatOllama",
+          "BaseChatModel",
+          "BaseLanguageModel",
+          "Runnable"
+        ],
+        "category": "Chat Models",
+        "description": "Chat completion using open-source LLM on Ollama",
+        "inputParams": [
+          {
+            "label": "Base URL",
+            "name": "baseUrl",
+            "type": "string",
+            "default": "http://localhost:11434",
+            "id": "chatOllama_0-input-baseUrl-string"
+          },
+          {
+            "label": "Model Name",
+            "name": "modelName",
+            "type": "string",
+            "placeholder": "llama2",
+            "id": "chatOllama_0-input-modelName-string"
+          },
+          {
+            "label": "Temperature",
+            "name": "temperature",
+            "type": "number",
+            "description": "The temperature of the model. Increasing the temperature will make the model answer more creatively. (Default: 0.8). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 0.1,
+            "default": 0.9,
+            "optional": true,
+            "id": "chatOllama_0-input-temperature-number"
+          },
+          {
+            "label": "Allow Image Uploads",
+            "name": "allowImageUploads",
+            "type": "boolean",
+            "description": "Allow image input. Refer to the <a href=\"https://docs.flowiseai.com/using-flowise/uploads#image\" target=\"_blank\">docs</a> for more details.",
+            "default": false,
+            "optional": true,
+            "id": "chatOllama_0-input-allowImageUploads-boolean"
+          },
+          {
+            "label": "Streaming",
+            "name": "streaming",
+            "type": "boolean",
+            "default": true,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-streaming-boolean"
+          },
+          {
+            "label": "JSON Mode",
+            "name": "jsonMode",
+            "type": "boolean",
+            "description": "Coerces model outputs to only return JSON. Specify in the system prompt to return JSON. Ex: Format all responses as JSON object",
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-jsonMode-boolean"
+          },
+          {
+            "label": "Keep Alive",
+            "name": "keepAlive",
+            "type": "string",
+            "description": "How long to keep connection alive. A duration string (such as \"10m\" or \"24h\")",
+            "default": "5m",
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-keepAlive-string"
+          },
+          {
+            "label": "Top P",
+            "name": "topP",
+            "type": "number",
+            "description": "Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-topP-number"
+          },
+          {
+            "label": "Top K",
+            "name": "topK",
+            "type": "number",
+            "description": "Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-topK-number"
+          },
+          {
+            "label": "Mirostat",
+            "name": "mirostat",
+            "type": "number",
+            "description": "Enable Mirostat sampling for controlling perplexity. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-mirostat-number"
+          },
+          {
+            "label": "Mirostat ETA",
+            "name": "mirostatEta",
+            "type": "number",
+            "description": "Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. (Default: 0.1) Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-mirostatEta-number"
+          },
+          {
+            "label": "Mirostat TAU",
+            "name": "mirostatTau",
+            "type": "number",
+            "description": "Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text. (Default: 5.0) Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-mirostatTau-number"
+          },
+          {
+            "label": "Context Window Size",
+            "name": "numCtx",
+            "type": "number",
+            "description": "Sets the size of the context window used to generate the next token. (Default: 2048) Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-numCtx-number"
+          },
+          {
+            "label": "Number of GPU",
+            "name": "numGpu",
+            "type": "number",
+            "description": "The number of layers to send to the GPU(s). On macOS it defaults to 1 to enable metal support, 0 to disable. Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-numGpu-number"
+          },
+          {
+            "label": "Number of Thread",
+            "name": "numThread",
+            "type": "number",
+            "description": "Sets the number of threads to use during computation. By default, Ollama will detect this for optimal performance. It is recommended to set this value to the number of physical CPU cores your system has (as opposed to the logical number of cores). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-numThread-number"
+          },
+          {
+            "label": "Repeat Last N",
+            "name": "repeatLastN",
+            "type": "number",
+            "description": "Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-repeatLastN-number"
+          },
+          {
+            "label": "Repeat Penalty",
+            "name": "repeatPenalty",
+            "type": "number",
+            "description": "Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-repeatPenalty-number"
+          },
+          {
+            "label": "Stop Sequence",
+            "name": "stop",
+            "type": "string",
+            "rows": 4,
+            "placeholder": "AI assistant:",
+            "description": "Sets the stop sequences to use. Use comma to seperate different sequences. Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-stop-string"
+          },
+          {
+            "label": "Tail Free Sampling",
+            "name": "tfsZ",
+            "type": "number",
+            "description": "Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (Default: 1). Refer to <a target=\"_blank\" href=\"https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values\">docs</a> for more details",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOllama_0-input-tfsZ-number"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "label": "Cache",
+            "name": "cache",
+            "type": "BaseCache",
+            "optional": true,
+            "id": "chatOllama_0-input-cache-BaseCache"
+          }
+        ],
+        "inputs": {
+          "cache": "",
+          "baseUrl": "http://ollama:11434",
+          "modelName": "mistral:7b",
+          "temperature": "0.1",
+          "allowImageUploads": "",
+          "streaming": true,
+          "jsonMode": "",
+          "keepAlive": "5m",
+          "topP": "",
+          "topK": "",
+          "mirostat": "",
+          "mirostatEta": "",
+          "mirostatTau": "",
+          "numCtx": "",
+          "numGpu": "",
+          "numThread": "",
+          "repeatLastN": "",
+          "repeatPenalty": "",
+          "stop": "",
+          "tfsZ": ""
+        },
+        "outputAnchors": [
+          {
+            "id": "chatOllama_0-output-chatOllama-ChatOllama|ChatOllama|BaseChatModel|BaseLanguageModel|Runnable",
+            "name": "chatOllama",
+            "label": "ChatOllama",
+            "description": "Chat completion using open-source LLM on Ollama",
+            "type": "ChatOllama | ChatOllama | BaseChatModel | BaseLanguageModel | Runnable"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "width": 300,
+      "height": 676,
+      "selected": false,
+      "dragging": false,
+      "positionAbsolute": {
+        "x": 348.4936104522406,
+        "y": 97.22425693774005
+      }
     }
   ],
   "edges": [
-    {
-      "source": "bufferWindowMemory_0",
-      "sourceHandle": "bufferWindowMemory_0-output-bufferWindowMemory-BufferWindowMemory|BaseChatMemory|BaseMemory",
-      "target": "toolAgent_0",
-      "targetHandle": "toolAgent_0-input-memory-BaseChatMemory",
-      "type": "buttonedge",
-      "id": "bufferWindowMemory_0-bufferWindowMemory_0-output-bufferWindowMemory-BufferWindowMemory|BaseChatMemory|BaseMemory-toolAgent_0-toolAgent_0-input-memory-BaseChatMemory"
-    },
     {
       "source": "qdrant_0",
       "sourceHandle": "qdrant_0-output-retriever-Qdrant|VectorStoreRetriever|BaseRetriever",
@@ -1165,14 +1258,6 @@
       "id": "chatPromptTemplate_0-chatPromptTemplate_0-output-chatPromptTemplate-ChatPromptTemplate|BaseChatPromptTemplate|BasePromptTemplate|Runnable-toolAgent_0-toolAgent_0-input-chatPromptTemplate-ChatPromptTemplate"
     },
     {
-      "source": "chatAnthropic_0",
-      "sourceHandle": "chatAnthropic_0-output-chatAnthropic-ChatAnthropic|ChatAnthropicMessages|BaseChatModel|BaseLanguageModel|Runnable",
-      "target": "toolAgent_0",
-      "targetHandle": "toolAgent_0-input-model-BaseChatModel",
-      "type": "buttonedge",
-      "id": "chatAnthropic_0-chatAnthropic_0-output-chatAnthropic-ChatAnthropic|ChatAnthropicMessages|BaseChatModel|BaseLanguageModel|Runnable-toolAgent_0-toolAgent_0-input-model-BaseChatModel"
-    },
-    {
       "source": "retrieverTool_0",
       "sourceHandle": "retrieverTool_0-output-retrieverTool-RetrieverTool|DynamicTool|Tool|StructuredTool|Runnable",
       "target": "toolAgent_0",
@@ -1195,6 +1280,22 @@
       "targetHandle": "pdfFile_0-input-textSplitter-TextSplitter",
       "type": "buttonedge",
       "id": "recursiveCharacterTextSplitter_0-recursiveCharacterTextSplitter_0-output-recursiveCharacterTextSplitter-RecursiveCharacterTextSplitter|TextSplitter|BaseDocumentTransformer|Runnable-pdfFile_0-pdfFile_0-input-textSplitter-TextSplitter"
+    },
+    {
+      "source": "chatOllama_0",
+      "sourceHandle": "chatOllama_0-output-chatOllama-ChatOllama|ChatOllama|BaseChatModel|BaseLanguageModel|Runnable",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-model-BaseChatModel",
+      "type": "buttonedge",
+      "id": "chatOllama_0-chatOllama_0-output-chatOllama-ChatOllama|ChatOllama|BaseChatModel|BaseLanguageModel|Runnable-toolAgent_0-toolAgent_0-input-model-BaseChatModel"
+    },
+    {
+      "source": "bufferWindowMemory_0",
+      "sourceHandle": "bufferWindowMemory_0-output-bufferWindowMemory-BufferWindowMemory|BaseChatMemory|BaseMemory",
+      "target": "toolAgent_0",
+      "targetHandle": "toolAgent_0-input-memory-BaseChatMemory",
+      "type": "buttonedge",
+      "id": "bufferWindowMemory_0-bufferWindowMemory_0-output-bufferWindowMemory-BufferWindowMemory|BaseChatMemory|BaseMemory-toolAgent_0-toolAgent_0-input-memory-BaseChatMemory"
     }
   ]
 }

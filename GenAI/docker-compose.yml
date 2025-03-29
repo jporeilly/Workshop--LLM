@@ -1,6 +1,7 @@
 # Docker Compose configuration for an AI development stack
-# This setup includes n8n (workflow automation), Postgres, Ollama (LLM serving), 
+# This setup includes n8n (workflow automation), Postgres, 
 # Qdrant (vector database), Open-WebUI, and Flowise
+# Ollama will run on the host machine instead of in a container
 
 # Define volumes for persistent storage
 volumes:
@@ -8,8 +9,6 @@ volumes:
   n8n_storage:
   # Storage for PostgreSQL database files
   postgres_storage:
-  # Storage for Ollama models and configuration
-  ollama_storage:
   # Storage for Qdrant vector database
   qdrant_storage:
   # Storage for Open-WebUI configuration and data
@@ -42,29 +41,8 @@ x-n8n: &service-n8n
     - N8N_USER_MANAGEMENT_JWT_SECRET
   links:
     - postgres  # Creates a DNS entry for the postgres service
-
-# Common configuration for Ollama service (using YAML anchor)
-x-ollama: &service-ollama
-  image: ollama/ollama:latest
-  networks: ['demo']
-  restart: unless-stopped
-  ports:
-    - 11435:11434  # Map to a different external port to avoid conflicts
-  volumes:
-    - ollama_storage:/root/.ollama  # Persist Ollama models and data
-
-# Common configuration for initializing Ollama with models (using YAML anchor)
-x-init-ollama: &init-ollama
-  image: ollama/ollama:latest
-  networks: ['demo']
-  entrypoint: /bin/sh
-  volumes:
-    - ollama_storage:/root/.ollama  # Share the same volume as the Ollama service
-  command:
-    - "-c"
-    # Waits for Ollama to start, then pulls the specified models
-    # Using internal container port 11434 for communication within the Docker network
-    - "sleep 10; OLLAMA_HOST=ollama:11434 ollama pull llama3.1; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+  extra_hosts:
+    - "host.docker.internal:host-gateway"  # Allow access to host machine where Ollama is running
 
 # Define all services
 services:
@@ -84,7 +62,7 @@ services:
     ports:
       - 3001:3001  # Expose Flowise UI on port 3001
     extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allow access to host machine services
+      - "host.docker.internal:host-gateway"  # Allow access to host machine services including Ollama
     volumes:
       - flowise:/root/.flowise  # Store Flowise data in a Docker volume for better persistence
     entrypoint: /bin/sh -c "sleep 3; flowise start"  # Wait before starting to ensure dependencies are ready
@@ -101,6 +79,8 @@ services:
     container_name: open-webui
     ports:
       - "3000:8080"  # Map container port 8080 to host port 3000
+    environment:
+      - OLLAMA_API_BASE_URL=http://host.docker.internal:11434/api  # Connect to Ollama on host
     extra_hosts:
       - "host.docker.internal:host-gateway"  # Allow access to host machine services
     volumes:
@@ -169,37 +149,12 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage  # Persist vector database files
 
-  # Ollama for CPU - activated with "cpu" profile
-  ollama-cpu:
-    profiles: ["cpu"]  # Only start with "cpu" profile
-    <<: *service-ollama  # Inherit configuration from service-ollama anchor
-    container_name: ollama  # Using a single name for service discovery
+# Note: The following services have been removed as Ollama will run on the host:
+# - ollama-cpu
+# - ollama-gpu
+# - ollama-pull-llama-cpu
+# - ollama-pull-llama-gpu
 
-  # Ollama for GPU (NVIDIA) - activated with "gpu-nvidia" profile
-  ollama-gpu:
-    profiles: ["gpu-nvidia"]  # Only start with "gpu-nvidia" profile
-    <<: *service-ollama  # Inherit configuration from service-ollama anchor
-    container_name: ollama  # Using a single name for service discovery
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]  # Request GPU access for the container
-
-  # Initialize Ollama with models (CPU version)
-  ollama-pull-llama-cpu:
-    profiles: ["cpu"]  # Only start with "cpu" profile
-    <<: *init-ollama  # Inherit configuration from init-ollama anchor
-    container_name: ollama-pull-llama-cpu
-    depends_on:
-      - ollama-cpu  # Wait for Ollama CPU service to start
-
-  # Initialize Ollama with models (GPU version)
-  ollama-pull-llama-gpu:
-    profiles: ["gpu-nvidia"]  # Only start with "gpu-nvidia" profile
-    <<: *init-ollama  # Inherit configuration from init-ollama anchor
-    container_name: ollama-pull-llama-gpu
-    depends_on:
-      - ollama-gpu  # Wait for Ollama GPU service to start
+# You will need to manually run these commands on your host:
+# - ollama pull llama3.1
+# - ollama pull nomic-embed-text
