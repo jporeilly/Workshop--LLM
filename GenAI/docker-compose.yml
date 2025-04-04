@@ -37,6 +37,10 @@ x-n8n: &service-n8n
     - N8N_USER_MANAGEMENT_JWT_SECRET
     - NVIDIA_VISIBLE_DEVICES=all
     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    # LangSmith configuration
+    - LANGCHAIN_API_KEY=https://hook.eu2.make.com/dph6owpdo1vu4e1yzclwxcwf6g5y40by
+    - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-default}
+    - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
   # No need for links or extra_hosts with host networking
 
 # Define all services
@@ -56,6 +60,10 @@ services:
       - NODE_OPTIONS=--max-old-space-size=4096
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      # LangSmith configuration
+      - LANGCHAIN_API_KEY=https://hook.eu2.make.com/dph6owpdo1vu4e1yzclwxcwf6g5y40by
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-default}
+      - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
     # No need for ports with host networking
     volumes:
       - flowise:/root/.flowise  # Store Flowise data in a Docker volume for better persistence
