@@ -38,7 +38,7 @@ x-n8n: &service-n8n
     - NVIDIA_VISIBLE_DEVICES=all
     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     # LangSmith configuration
-    - LANGCHAIN_API_KEY=https://hook.eu2.make.com/dph6owpdo1vu4e1yzclwxcwf6g5y40by
+    - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-default}
     - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
   # No need for links or extra_hosts with host networking
@@ -61,7 +61,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       # LangSmith configuration
-      - LANGCHAIN_API_KEY=https://hook.eu2.make.com/dph6owpdo1vu4e1yzclwxcwf6g5y40by
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-default}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
     # No need for ports with host networking
