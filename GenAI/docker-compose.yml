@@ -2,6 +2,7 @@
 # This setup includes n8n (workflow automation), Postgres, 
 # Qdrant (vector database), Open-WebUI, and Flowise
 # Ollama will run on the host machine instead of in a container
+# ALL CONTAINERS USE HOST NETWORK FOR SIMPLIFIED ACCESS
 
 # Define volumes for persistent storage
 volumes:
@@ -16,19 +17,14 @@ volumes:
   # Storage for Flowise configuration and data
   flowise:
 
-# Define networks for container communication
-networks:
-  # Main network that all services will connect to
-  demo:
-
 # Common service configuration for n8n containers (using YAML anchor)
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
-  networks: ['demo']
+  network_mode: "host"  # Use host networking
   environment:
     # Database configuration for n8n
     - DB_TYPE=postgresdb
-    - DB_POSTGRESDB_HOST=postgres
+    - DB_POSTGRESDB_HOST=localhost  # Using localhost instead of service name
     - DB_POSTGRESDB_USER=${POSTGRES_USER}  # Uses environment variable
     - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}  # Uses environment variable
     # n8n specific configuration
@@ -39,17 +35,16 @@ x-n8n: &service-n8n
     # Security keys (must be provided in environment or .env file)
     - N8N_ENCRYPTION_KEY
     - N8N_USER_MANAGEMENT_JWT_SECRET
-  links:
-    - postgres  # Creates a DNS entry for the postgres service
-  extra_hosts:
-    - "host.docker.internal:host-gateway"  # Allow access to host machine where Ollama is running
+    - NVIDIA_VISIBLE_DEVICES=all
+    - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+  # No need for links or extra_hosts with host networking
 
 # Define all services
 services:
   # Flowise - a low-code AI automation platform
   flowise:
     image: flowiseai/flowise
-    networks: ['demo']
+    network_mode: "host"  # Use host networking
     restart: unless-stopped
     container_name: flowise
     environment:
@@ -59,43 +54,57 @@ services:
       - DATABASE_PATH=/root/.flowise/database.sqlite
       # Increase memory limit if needed
       - NODE_OPTIONS=--max-old-space-size=4096
-    ports:
-      - 3001:3001  # Expose Flowise UI on port 3001
-    extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allow access to host machine services including Ollama
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    # No need for ports with host networking
     volumes:
       - flowise:/root/.flowise  # Store Flowise data in a Docker volume for better persistence
-    entrypoint: /bin/sh -c "sleep 3; flowise start"  # Wait before starting to ensure dependencies are ready
+      - ./GenAI/flowise-uploads:/root/uploads  # Mount point for document uploads in GenAI folder
+    entrypoint: /bin/sh -c "mkdir -p /root/uploads && chmod 777 /root/uploads && sleep 3; flowise start"  # Create uploads directory and ensure proper permissions
     deploy:
       resources:
         limits:
-          memory: 4G  # Set memory limit for stability
+          memory: 4G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   # Open-WebUI - a web interface for Ollama models
-  # UPDATED: Now using host network mode to fix connection issues
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-    network_mode: "host"  # Changed to host networking to fix connection issues
+    network_mode: "host"  # Already using host networking
     restart: unless-stopped
     container_name: open-webui
     environment:
-      - OLLAMA_API_BASE_URL=http://localhost:11434/api  # Updated to use localhost instead of host.docker.internal
+      - OLLAMA_API_BASE_URL=http://localhost:11434/api
+      - PORT=8090  # Changed port to 8090 to avoid conflicts
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - open-webui:/app/backend/data  # Persist Open-WebUI data
-    # Note: ports mapping removed as it's not needed with host network mode
-    # Note: extra_hosts removed as it's not needed with host network mode
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   # PostgreSQL database - used by n8n for workflow storage
   postgres:
     image: postgres:16-alpine
-    networks: ['demo']
+    network_mode: "host"  # Use host networking
     restart: unless-stopped
-    ports:
-      - 5432:5432  # Expose PostgreSQL on default port
+    # No need for ports with host networking, but adding environment variable to avoid port conflicts
     environment:
       - POSTGRES_USER  # Username from environment variable
       - POSTGRES_PASSWORD  # Password from environment variable
       - POSTGRES_DB  # Database name from environment variable
+      - PGPORT=5432  # Explicitly set PostgreSQL port
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - postgres_storage:/var/lib/postgresql/data  # Persist database files
     healthcheck:
@@ -105,48 +114,40 @@ services:
       timeout: 5s
       retries: 10
 
-  # n8n-import - one-time container to import workflows and credentials
-  n8n-import:
-    <<: *service-n8n  # Inherit configuration from service-n8n anchor
-    container_name: n8n-import
-    entrypoint: /bin/sh
-    command:
-      - "-c"
-      # Import credentials and workflows from backup directory
-      - "n8n import:credentials --separate --input=/backup/credentials && n8n import:workflow --separate --input=/backup/workflows"
-    volumes:
-      - ./n8n/backup:/backup  # Mount local backup directory
-    depends_on:
-      postgres:
-        condition: service_healthy  # Wait until PostgreSQL is healthy
-
   # n8n - workflow automation platform
   n8n:
     <<: *service-n8n  # Inherit configuration from service-n8n anchor
     container_name: n8n
     restart: unless-stopped
-    ports:
-      - 5678:5678  # Expose n8n UI on port 5678
+    # No need for ports with host networking
     volumes:
       - n8n_storage:/home/node/.n8n  # Persist n8n data
       - ./n8n/backup:/backup  # Mount local backup directory
       - ./shared:/data/shared  # Mount shared directory for data exchange
+      - ./GenAI/n8n-uploads:/home/node/uploads  # Mount point for document uploads in GenAI folder
     depends_on:
       postgres:
         condition: service_healthy  # Wait until PostgreSQL is healthy
-      n8n-import:
-        condition: service_completed_successfully  # Wait until import is complete
 
   # Qdrant - vector database for similarity search
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
-    networks: ['demo']
+    network_mode: "host"  # Use host networking
     restart: unless-stopped
-    ports:
-      - 6333:6333  # Expose Qdrant API on default port
+    # No need for ports with host networking
     volumes:
       - qdrant_storage:/qdrant/storage  # Persist vector database files
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
 
 # You will need to manually run these commands on your host:
 # - ollama pull llama3.1
