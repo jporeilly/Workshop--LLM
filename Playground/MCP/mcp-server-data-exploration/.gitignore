@@ -1,0 +1,30 @@
+# Virtual Environment
+.venv/
+venv/
+
+# Distribution
+build/
+*.egg-info/
+# Keep dist/ for MCP server builds
+
+# Python cache files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies
+uv.lock
+
+# Large data files
+data/Students_Grading_Dataset.json
+data/Students_Grading_Dataset_Biased.*
+data/archive.zip
+
+# Environment variables
+.env

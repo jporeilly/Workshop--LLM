@@ -16,6 +16,9 @@ volumes:
   open-webui:
   # Storage for Flowise configuration and data
   flowise:
+  # Your external volume
+  genai_flowise:
+    external: true
 
 # Common service configuration for n8n containers (using YAML anchor)
 x-n8n: &service-n8n
@@ -37,10 +40,6 @@ x-n8n: &service-n8n
     - N8N_USER_MANAGEMENT_JWT_SECRET
     - NVIDIA_VISIBLE_DEVICES=all
     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    # LangSmith configuration
-    - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
-    - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-default}
-    - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
   # No need for links or extra_hosts with host networking
 
 # Define all services
@@ -51,12 +50,6 @@ services:
     network_mode: "host"  # Use host networking
     restart: unless-stopped
     container_name: flowise
-    user: "1000:1000"  # Run as non-root user
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     environment:
       - PORT=3001
       # Using internal SQLite database in the default location
@@ -66,18 +59,11 @@ services:
       - NODE_OPTIONS=--max-old-space-size=4096
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      # LangSmith configuration
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
-      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-default}
-      - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
     # No need for ports with host networking
     volumes:
-      - flowise:/root/.flowise  # Store Flowise data in a Docker volume for better persistence
-      - ./GenAI/flowise-uploads:/root/uploads  # Mount point for document uploads in GenAI folder
+      - genai_flowise:/root/.flowise  # Named volume for Flowise data
+      - ./flowise-uploads:/root/uploads  # Mount point for document uploads in GenAI folder
     entrypoint: /bin/sh -c "mkdir -p /root/uploads && chmod 777 /root/uploads && sleep 3; flowise start"  # Create uploads directory and ensure proper permissions
-    depends_on:
-      qdrant:
-        condition: service_healthy  # Wait for Qdrant to be healthy
     deploy:
       resources:
         limits:
@@ -94,12 +80,6 @@ services:
     network_mode: "host"  # Already using host networking
     restart: unless-stopped
     container_name: open-webui
-    user: "1000:1000"  # Run as non-root user
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8090"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     environment:
       - OLLAMA_API_BASE_URL=http://localhost:11434/api
       - PORT=8090  # Changed port to 8090 to avoid conflicts
@@ -109,8 +89,6 @@ services:
       - open-webui:/app/backend/data  # Persist Open-WebUI data
     deploy:
       resources:
-        limits:
-          memory: 2G
         reservations:
           devices:
             - driver: nvidia
@@ -147,9 +125,7 @@ services:
     # No need for ports with host networking
     volumes:
       - n8n_storage:/home/node/.n8n  # Persist n8n data
-      - ./n8n/backup:/backup  # Mount local backup directory
-      - ./shared:/data/shared  # Mount shared directory for data exchange
-      - ./GenAI/n8n-uploads:/home/node/uploads  # Mount point for document uploads in GenAI folder
+      - ./n8n-uploads:/home/node/uploads  # Mount point for document uploads in GenAI folder
     depends_on:
       postgres:
         condition: service_healthy  # Wait until PostgreSQL is healthy
@@ -160,11 +136,6 @@ services:
     container_name: qdrant
     network_mode: "host"  # Use host networking
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:6333/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     # No need for ports with host networking
     volumes:
       - qdrant_storage:/qdrant/storage  # Persist vector database files
@@ -177,7 +148,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
 
 # You will need to manually run these commands on your host:
 # - ollama pull llama3.1
