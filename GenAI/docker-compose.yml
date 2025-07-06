@@ -1,7 +1,7 @@
-# Docker Compose configuration for an AI development stack
+# Enhanced Docker Compose configuration for AI development stack
 # This setup includes n8n (workflow automation), Postgres, 
 # Qdrant (vector database), Open-WebUI, and Flowise
-# Ollama will run on the host machine instead of in a container
+# Ollama runs on the host machine for better model management
 # ALL CONTAINERS USE HOST NETWORK FOR SIMPLIFIED ACCESS
 
 # Define volumes for persistent storage
@@ -23,132 +23,212 @@ volumes:
 # Common service configuration for n8n containers (using YAML anchor)
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
-  network_mode: "host"  # Use host networking
+  network_mode: "host"
   environment:
     # Database configuration for n8n
     - DB_TYPE=postgresdb
-    - DB_POSTGRESDB_HOST=localhost  # Using localhost instead of service name
-    - DB_POSTGRESDB_USER=${POSTGRES_USER}  # Uses environment variable
-    - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}  # Uses environment variable
+    - DB_POSTGRESDB_HOST=localhost
+    - DB_POSTGRESDB_PORT=5435
+    - DB_POSTGRESDB_USER=${POSTGRES_USER}
+    - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+    - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
     # n8n specific configuration
-    - N8N_RUNNERS_ENABLED=true  # Enable workflow runners for performance
-    - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true  # Security measure for settings file
-    - N8N_DIAGNOSTICS_ENABLED=false  # Disable sending diagnostics data
-    - N8N_PERSONALIZATION_ENABLED=false  # Disable personalization features
-    # Security keys (must be provided in environment or .env file)
+    - N8N_RUNNERS_ENABLED=true
+    - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    - N8N_DIAGNOSTICS_ENABLED=false
+    - N8N_PERSONALIZATION_ENABLED=false
+    - N8N_METRICS=false
+    - N8N_LOG_LEVEL=info
+    # Security keys (encryption key is required, JWT only if you want user management)
     - N8N_ENCRYPTION_KEY
-    - N8N_USER_MANAGEMENT_JWT_SECRET
+    # - N8N_USER_MANAGEMENT_JWT_SECRET  # Uncomment if you want user management
+    # GPU support (if needed for n8n workflows)
     - NVIDIA_VISIBLE_DEVICES=all
     - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-  # No need for links or extra_hosts with host networking
+  deploy:
+    resources:
+      limits:
+        memory: ${N8N_MEMORY_LIMIT:-2G}
+      reservations:
+        devices:
+          - driver: nvidia
+            device_ids: ['${N8N_GPU_DEVICE:-0}']
+            capabilities: [gpu]
 
 # Define all services
 services:
-  # Flowise - a low-code AI automation platform
+  # Flowise - AI automation platform (always latest)
   flowise:
-    image: flowiseai/flowise
-    network_mode: "host"  # Use host networking
+    image: flowiseai/flowise:latest
+    network_mode: "host"
     restart: unless-stopped
     container_name: flowise
     environment:
       - PORT=3001
-      # Using internal SQLite database in the default location
       - DATABASE_TYPE=sqlite
       - DATABASE_PATH=/root/.flowise/database.sqlite
-      # Increase memory limit if needed
       - NODE_OPTIONS=--max-old-space-size=4096
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    # No need for ports with host networking
+      # Enable CORS for better integration
+      - CORS_ORIGINS=*
+      # Security settings
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME:-admin}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+      - FLOWISE_SECRETKEY_OVERWRITE=${FLOWISE_SECRET_KEY}
+      # GPU support with configurable device
+      - NVIDIA_VISIBLE_DEVICES=${FLOWISE_GPU_DEVICE:-${NVIDIA_VISIBLE_DEVICES:-all}}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
     volumes:
-      - genai_flowise:/root/.flowise  # Named volume for Flowise data
-      - ./flowise-uploads:/root/uploads  # Mount point for document uploads in GenAI folder
-    entrypoint: /bin/sh -c "mkdir -p /root/uploads && chmod 777 /root/uploads && sleep 3; flowise start"  # Create uploads directory and ensure proper permissions
+      - genai_flowise:/root/.flowise
+      - ./flowise-uploads:/root/uploads
+    entrypoint: /bin/sh -c "mkdir -p /root/uploads && chmod 755 /root/uploads && sleep 3; flowise start"
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: ${FLOWISE_MEMORY_LIMIT:-4G}
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids: ['${FLOWISE_GPU_DEVICE:-0}']
               capabilities: [gpu]
 
-  # Open-WebUI - a web interface for Ollama models
+  # Open-WebUI - web interface for Ollama models (always latest)
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    network_mode: "host"  # Already using host networking
+    image: ghcr.io/open-webui/open-webui:latest
+    network_mode: "host"
     restart: unless-stopped
     container_name: open-webui
     environment:
       - OLLAMA_API_BASE_URL=http://localhost:11434/api
-      - PORT=8090  # Changed port to 8090 to avoid conflicts
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - PORT=8090
+      - WEBUI_NAME=AI Chat Interface
+      # Enable file uploads
+      - ENABLE_RAG_HYBRID_SEARCH=true
+      - ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=true
+      # Security settings (auth disabled by default)
+      - WEBUI_AUTH=${WEBUI_AUTH:-false}
+      # - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}  # Only needed if WEBUI_AUTH=true
+      # GPU support with configurable device
+      - NVIDIA_VISIBLE_DEVICES=${OPEN_WEBUI_GPU_DEVICE:-${NVIDIA_VISIBLE_DEVICES:-all}}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
     volumes:
-      - open-webui:/app/backend/data  # Persist Open-WebUI data
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-  # PostgreSQL database - used by n8n for workflow storage
-  postgres:
-    image: postgres:16-alpine
-    network_mode: "host"  # Use host networking
-    restart: unless-stopped
-    # No need for ports with host networking, but adding environment variable to avoid port conflicts
-    environment:
-      - POSTGRES_USER  # Username from environment variable
-      - POSTGRES_PASSWORD  # Password from environment variable
-      - POSTGRES_DB  # Database name from environment variable
-      - PGPORT=5432  # Explicitly set PostgreSQL port
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    volumes:
-      - postgres_storage:/var/lib/postgresql/data  # Persist database files
-    healthcheck:
-      # Check if PostgreSQL is ready to accept connections
-      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  # n8n - workflow automation platform
-  n8n:
-    <<: *service-n8n  # Inherit configuration from service-n8n anchor
-    container_name: n8n
-    restart: unless-stopped
-    # No need for ports with host networking
-    volumes:
-      - n8n_storage:/home/node/.n8n  # Persist n8n data
-      - ./n8n-uploads:/home/node/uploads  # Mount point for document uploads in GenAI folder
-    depends_on:
-      postgres:
-        condition: service_healthy  # Wait until PostgreSQL is healthy
-
-  # Qdrant - vector database for similarity search
-  qdrant:
-    image: qdrant/qdrant
-    container_name: qdrant
-    network_mode: "host"  # Use host networking
-    restart: unless-stopped
-    # No need for ports with host networking
-    volumes:
-      - qdrant_storage:/qdrant/storage  # Persist vector database files
+      - open-webui:/app/backend/data
+      - ./open-webui-uploads:/app/backend/uploads
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: ${OPEN_WEBUI_MEMORY_LIMIT:-2G}
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids: ['${OPEN_WEBUI_GPU_DEVICE:-0}']
               capabilities: [gpu]
 
-# You will need to manually run these commands on your host:
-# - ollama pull llama3.1
-# - ollama pull nomic-embed-text
+  # PostgreSQL database - always latest stable
+  postgres:
+    image: postgres:latest
+    network_mode: "host"
+    restart: unless-stopped
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGPORT=5435
+      # Performance tuning
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    volumes:
+      - postgres_storage:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d  # For initialization scripts
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB} -p 5435']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEMORY_LIMIT:-1G}
+
+  # n8n - workflow automation platform
+  n8n:
+    <<: *service-n8n
+    container_name: n8n
+    restart: unless-stopped
+    environment:
+      # Additional n8n-specific settings
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - WEBHOOK_URL=http://localhost:5678/
+      # Add database configuration explicitly
+      - DB_POSTGRESDB_HOST=localhost
+      - DB_POSTGRESDB_PORT=5435
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      # Security and performance
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      # - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET}  # Uncomment if you want user management
+      - N8N_METRICS=false
+      - N8N_LOG_LEVEL=info
+      # GPU support with configurable device
+      - NVIDIA_VISIBLE_DEVICES=${N8N_GPU_DEVICE:-${NVIDIA_VISIBLE_DEVICES:-all}}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+    volumes:
+      - n8n_storage:/home/node/.n8n
+      - ./n8n-uploads:/home/node/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Qdrant - vector database (always latest)
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    network_mode: "host"
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      # Performance settings
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=4
+      - QDRANT__STORAGE__OPTIMIZERS__DELETED_THRESHOLD=0.2
+      - QDRANT__STORAGE__OPTIMIZERS__VACUUM_MIN_VECTOR_NUMBER=1000
+      # GPU support with configurable device
+      - NVIDIA_VISIBLE_DEVICES=${QDRANT_GPU_DEVICE:-${NVIDIA_VISIBLE_DEVICES:-all}}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+    volumes:
+      - qdrant_storage:/qdrant/storage
+      - ./qdrant-config:/qdrant/config  # For custom configuration
+    deploy:
+      resources:
+        limits:
+          memory: ${QDRANT_MEMORY_LIMIT:-2G}
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['${QDRANT_GPU_DEVICE:-0}']
+              capabilities: [gpu]
+
+  # Optional: Redis for caching (always latest)
+  redis:
+    image: redis:latest
+    container_name: redis
+    network_mode: "host"
+    restart: unless-stopped
+    command: redis-server --port 6380 --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ./redis-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+# Health check script for the entire stack
+x-healthcheck: &healthcheck
+  test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/ping || exit 1"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
