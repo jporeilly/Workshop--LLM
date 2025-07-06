@@ -50,7 +50,7 @@ if command -v nvidia-smi &> /dev/null; then
     echo "🔍 GPU Information:"
     nvidia-smi --query-gpu=index,name,memory.total,memory.free --format=csv,noheader,nounits
     
-    GPU_COUNT=$(nvidia-smi --query-gpu=count --format=csv,noheader,nounits)
+    GPU_COUNT=$(nvidia-smi --query-gpu=count --format=csv,noheader,nounits | tr -d '\n')
     print_status "Found $GPU_COUNT GPU(s)"
     
     if [ "$GPU_COUNT" -gt 1 ]; then
@@ -90,20 +90,20 @@ if [ ! -f .env ]; then
     # Generate secure random keys
     print_status "Generating secure random keys..."
     
-    # Generate 32-character encryption key
+    # Generate 32-character encryption key for n8n (needed for secure credential storage)
     ENCRYPTION_KEY=$(openssl rand -hex 16)
-    sed -i "s/your_32_character_encryption_key_here/$ENCRYPTION_KEY/" .env
+    sed -i "s|your_32_character_encryption_key_here|$ENCRYPTION_KEY|g" .env
     
     # Generate Flowise secret
     FLOWISE_SECRET=$(openssl rand -hex 32)
-    sed -i "s/your_flowise_secret_key_here/$FLOWISE_SECRET/" .env
+    sed -i "s|your_flowise_secret_key_here|$FLOWISE_SECRET|g" .env
     
-    # Generate secure password
-    POSTGRES_PASSWORD=$(openssl rand -base64 32)
-    sed -i "s/your_secure_password_here/$POSTGRES_PASSWORD/" .env
+    # Generate secure password (alphanumeric only to avoid sed issues)
+    POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+    sed -i "s|your_secure_password_here|$POSTGRES_PASSWORD|g" .env
     
-    FLOWISE_PASSWORD=$(openssl rand -base64 16)
-    sed -i "s/your_flowise_password_here/$FLOWISE_PASSWORD/" .env
+    FLOWISE_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+    sed -i "s|your_flowise_password_here|$FLOWISE_PASSWORD|g" .env
     
     print_status "Generated secure random keys and passwords in .env file"
     print_warning "Please review and customize the .env file as needed"
@@ -125,7 +125,7 @@ if ! pgrep -f "ollama serve" > /dev/null; then
     
     # Configure Ollama for multiple GPUs if available
     if command -v nvidia-smi &> /dev/null; then
-        GPU_COUNT=$(nvidia-smi --query-gpu=count --format=csv,noheader,nounits)
+        GPU_COUNT=$(nvidia-smi --query-gpu=count --format=csv,noheader,nounits | tr -d '\n')
         if [ "$GPU_COUNT" -gt 1 ]; then
             export OLLAMA_NUM_GPU=$GPU_COUNT
             print_status "Configuring Ollama to use $GPU_COUNT GPUs"
